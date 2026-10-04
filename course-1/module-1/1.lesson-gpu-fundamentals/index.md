@@ -12,7 +12,7 @@ tagz:
   - kwok
   - nvidia
 playground:
-  name: dev-machine
+  name: gpu-engineering-on-kubernetes-playground  # TODO: replace with real slug from labctl playground create
 # challenges:   (commented out — no slug yet)
 #   <platform-slug>: {}
 tasks:

@@ -1,6 +1,11 @@
+# WARNING: Do not apply this manifest before completing Step 2 of Lesson 1.
+# verify_no_gpu_before checks that nvidia.com/gpu is ABSENT from allocatable.
+# Applying this manifest first will inject GPU capacity and cause that task to fail.
+# Correct order: Step 1 (verify cluster) → Step 2 (verify no GPU) → Step 3 (install ghostgpu)
+#
 # KWOK virtual GPU node template
 # Apply with: kubectl apply -f course-1/manifests/kwok-gpu-node.yaml
-# Replace <NODE_NAME> with the desired node name before applying.
+# Replace the metadata.name field with the desired node name before applying.
 #
 # The kwok.x-k8s.io/node: fake annotation tells the KWOK controller
 # to manage this node's lifecycle (heartbeat, pod simulation).

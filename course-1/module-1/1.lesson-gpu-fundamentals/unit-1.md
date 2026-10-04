@@ -499,18 +499,6 @@ kubectl delete pod gpu-greedy
 | ResourceSlice | DRA (Dynamic Resource Allocation) object — newer, more expressive than extended resource integers |
 | Pending pod | Pod waiting for schedulable resources — check `Events: Insufficient nvidia.com/gpu` |
 
-::simple-task
----
-:tasks: tasks
-:name: verify_lesson_complete
----
-#active
-All 5 tasks are green — this lesson is complete.
-
-#completed
-GPU Fundamentals lesson complete. On to the next one! ✓
-::
-
 ---
 
 ## Now Prove It
@@ -536,3 +524,15 @@ from memory. If you can do that, you're ready for Module 2.
 ---
 ::
 -->
+
+::simple-task
+---
+:tasks: tasks
+:name: verify_lesson_complete
+---
+#active
+All 5 tasks are green — this lesson is complete.
+
+#completed
+GPU Fundamentals lesson complete. On to the next one! ✓
+::
