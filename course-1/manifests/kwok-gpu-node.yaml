@@ -1,0 +1,73 @@
+# KWOK virtual GPU node template
+# Apply with: kubectl apply -f course-1/manifests/kwok-gpu-node.yaml
+# Replace <NODE_NAME> with the desired node name before applying.
+#
+# The kwok.x-k8s.io/node: fake annotation tells the KWOK controller
+# to manage this node's lifecycle (heartbeat, pod simulation).
+# No real VM is created — the node exists only in the Kubernetes API.
+apiVersion: v1
+kind: Node
+metadata:
+  name: gpu-worker-template
+  annotations:
+    kwok.x-k8s.io/node: fake
+  labels:
+    node-role.kubernetes.io/worker: ""
+    nvidia.com/gpu.present: "true"
+    beta.kubernetes.io/os: linux
+    kubernetes.io/os: linux
+    kubernetes.io/arch: amd64
+spec:
+  # No taints — GPU taint is added by the device plugin on real nodes.
+  # ghostgpu does not add taints, so pods do not need gpu tolerations
+  # in a simulated cluster. The toleration in gpu-test-pod.yaml is included
+  # for real-cluster compatibility.
+  taints: []
+status:
+  allocatable:
+    # nvidia.com/gpu is patched in by ghostgpu (fake-gpu-operator) after install.
+    # Before ghostgpu runs, this field is absent from allocatable.
+    cpu: "32"
+    memory: 128Gi
+    pods: "110"
+    ephemeral-storage: 200Gi
+    nvidia.com/gpu: "4"
+  capacity:
+    cpu: "32"
+    memory: 128Gi
+    pods: "110"
+    ephemeral-storage: 200Gi
+    nvidia.com/gpu: "4"
+  conditions:
+  - lastHeartbeatTime: "2026-10-04T00:00:00Z"
+    lastTransitionTime: "2026-10-04T00:00:00Z"
+    message: kubelet is posting ready status
+    reason: KubeletReady
+    status: "True"
+    type: Ready
+  - lastHeartbeatTime: "2026-10-04T00:00:00Z"
+    lastTransitionTime: "2026-10-04T00:00:00Z"
+    message: node has sufficient memory
+    reason: KubeletHasSufficientMemory
+    status: "False"
+    type: MemoryPressure
+  - lastHeartbeatTime: "2026-10-04T00:00:00Z"
+    lastTransitionTime: "2026-10-04T00:00:00Z"
+    message: node has no disk pressure
+    reason: KubeletHasNoDiskPressure
+    status: "False"
+    type: DiskPressure
+  - lastHeartbeatTime: "2026-10-04T00:00:00Z"
+    lastTransitionTime: "2026-10-04T00:00:00Z"
+    message: node is not experiencing a network issue
+    reason: KubeletHasSufficientPID
+    status: "False"
+    type: PIDPressure
+  nodeInfo:
+    architecture: amd64
+    containerRuntimeVersion: containerd://1.7.0
+    kernelVersion: 5.15.0-fake
+    kubeProxyVersion: v1.29.0
+    kubeletVersion: v1.29.0
+    operatingSystem: linux
+    osImage: Ubuntu 22.04 LTS (simulated)

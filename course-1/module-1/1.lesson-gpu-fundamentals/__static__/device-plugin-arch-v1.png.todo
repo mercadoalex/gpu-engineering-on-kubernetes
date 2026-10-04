@@ -1,0 +1,1 @@
+Architecture diagram: kubelet ↔ gRPC ↔ device plugin DaemonSet ↔ real GPU hardware. Annotations: "device plugin registers nvidia.com/gpu with kubelet", "kubelet updates node.status.capacity", "scheduler reads allocatable for pod placement". Footer: "In production: NVIDIA device plugin. In this lesson: ghostgpu simulates the same contract."
