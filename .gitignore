@@ -7,4 +7,10 @@ downloads/
 *.json
 !package.json
 .agents/
-docs/reference-working
+
+# ColdFusion reference material — not part of this course
+docs/
+README_colldfusion.md
+
+# Original planning doc — internal only, lives in .kiro/steering/ as structured files
+gpu-k8s-lab.md
