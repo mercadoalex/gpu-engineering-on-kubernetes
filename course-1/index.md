@@ -5,4 +5,5 @@ description: A hands-on training for DevOps/SRE engineers who need to operate GP
 categories: [kubernetes, observability]
 tagz: [gpu, kueue, volcano, kwok, vllm, dcgm, nvidia]
 createdAt: 2026-10-04
+updatedAt: 2026-10-04
 ---

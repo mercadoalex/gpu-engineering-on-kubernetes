@@ -28,8 +28,6 @@ tasks:
   verify_no_gpu_before:
     machine: dev-machine
     user: laborant
-    needs:
-      - verify_node_allocatable
     run: |
       # Confirm nvidia.com/gpu is NOT present before ghostgpu install
       GPU_COUNT=$(kubectl get nodes -o json | jq '[.items[].status.allocatable | to_entries[] | select(.key == "nvidia.com/gpu")] | length')

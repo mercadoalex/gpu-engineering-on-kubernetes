@@ -19,7 +19,7 @@ first few minutes.
 ::image-box
 ---
 :src: __static__/gpu-extended-resource-v1.png
-:alt: TODO — see gpu-extended-resource-v1.png.todo for diagram spec
+:alt: Two-panel diagram showing how Kubernetes models GPU resources. Left panel: a K8s node with status.allocatable listing cpu, memory, and nvidia.com/gpu set to 0, with a red X over a GPU chip and the label 'Without device plugin, K8s cannot allocate GPU resources.' Right panel: the same node after ghostgpu is installed, with nvidia.com/gpu set to 4 and a green checkmark. A device plugin DaemonSet icon connects the two panels with an arrow labeled 'PATCH /api/v1/nodes/name/status'.
 :max-width: 860px
 ---
 _Without a device plugin, nvidia.com/gpu is 0. Install ghostgpu and it becomes 4. Kubernetes itself never changed — only the device plugin running on the node._
@@ -214,7 +214,7 @@ real GPU hardware.
 ::image-box
 ---
 :src: __static__/ghostgpu-architecture-v1.png
-:alt: TODO — see ghostgpu-architecture-v1.png.todo for diagram spec
+:alt: Architecture diagram showing the ghostgpu DaemonSet installation flow. A ghostgpu DaemonSet pod runs on a KWOK virtual node shown as a dashed box. An arrow from the DaemonSet to the node status is labeled 'PATCH /api/v1/nodes/{name}/status'. Three numbered steps are annotated: step 1 'ghostgpu pod starts on labeled node', step 2 'PATCH adds nvidia.com/gpu: 4 to status.allocatable', step 3 'kubectl describe node shows nvidia.com/gpu: 4 in Allocatable'. A footer note reads 'KWOK virtual nodes — no real hardware involved.'
 :max-width: 860px
 ---
 _ghostgpu's DaemonSet patches each KWOK node's status.allocatable via the Kubernetes API — no real GPU hardware involved._
