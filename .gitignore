@@ -7,3 +7,4 @@ downloads/
 *.json
 !package.json
 .agents/
+docs/reference-working
