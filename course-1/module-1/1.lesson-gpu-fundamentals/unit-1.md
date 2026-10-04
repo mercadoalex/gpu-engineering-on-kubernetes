@@ -96,6 +96,21 @@ KWOK virtual nodes are Ready ✓
 Your cluster has nodes. The nodes have CPU and memory. But from the scheduler's
 perspective, GPUs don't exist yet.
 
+::hint-box
+---
+:summary: Re-running this lesson? Reset first.
+---
+`verify_no_gpu_before` checks that ghostgpu is **not** installed yet. If you're retrying
+this lesson on a cluster where ghostgpu is already running, uninstall it first:
+
+```bash
+helm uninstall ghostgpu -n kube-system
+kubectl wait --for=delete pods -l app=fake-gpu-operator -n kube-system --timeout=60s
+```
+
+Then continue from Step 2. The remaining tasks are all idempotent.
+::
+
 **Activity — Terminal:** Look for GPU resources on a node:
 
 ```bash
@@ -336,37 +351,11 @@ nvidia.com/gpu capacity found on cluster nodes ✓
 
 ## 5. Schedule your first GPU pod
 
-Time to actually schedule something. Apply the gpu-test pod manifest:
+Time to actually schedule something. The manifest is already in the repo — apply it directly:
 
 **Activity — Terminal:**
 
 ```bash
-tee /workdir/course-1/manifests/gpu-test-pod.yaml << 'EOF'
-apiVersion: v1
-kind: Pod
-metadata:
-  name: gpu-test
-  namespace: default
-  labels:
-    app: gpu-test
-    course: gpu-engineering-on-kubernetes
-    module: "1"
-spec:
-  containers:
-  - name: gpu-test
-    image: busybox:1.36
-    command: ["sleep", "3600"]
-    resources:
-      requests:
-        nvidia.com/gpu: "1"
-      limits:
-        nvidia.com/gpu: "1"
-  tolerations:
-  - key: nvidia.com/gpu
-    operator: Exists
-    effect: NoSchedule
-  restartPolicy: Never
-EOF
 kubectl apply -f /workdir/course-1/manifests/gpu-test-pod.yaml
 ```
 
@@ -526,7 +515,21 @@ GPU Fundamentals lesson complete. On to the next one! ✓
 
 ## Now Prove It
 
-<!-- TODO: Add challenge card once labctl assigns a slug
+You've installed ghostgpu, scheduled a GPU pod, and seen what `Insufficient nvidia.com/gpu` looks like.
+
+Here's a self-directed challenge to close the loop:
+
+**Without looking at the scripts or manifests**, recreate the state from scratch on a clean cluster:
+
+1. Delete the `gpu-test` pod and uninstall ghostgpu.
+2. Confirm the cluster shows zero GPU capacity.
+3. Re-install ghostgpu with a different GPU count (`--set gpu.count=2`).
+4. Schedule a pod requesting 2 GPUs — it should land. Then try requesting 3 — it should `Pending`.
+
+There's no automated check for this part. The point is that you can reconstruct the full flow
+from memory. If you can do that, you're ready for Module 2.
+
+<!-- TODO: Add platform challenge card once labctl assigns a slug
 ::card
 ---
 :challenge: challenges.<platform-slug>

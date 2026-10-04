@@ -71,6 +71,7 @@ tasks:
     user: laborant
     needs:
       - verify_node_allocatable
+      - verify_no_gpu_before
       - verify_ghostgpu_installed
       - verify_gpu_capacity
       - verify_gpu_pod_scheduled
