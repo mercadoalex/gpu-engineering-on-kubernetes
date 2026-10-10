@@ -1,6 +1,10 @@
 ---
 kind: lesson
 title: Your Cluster Has No Idea What a GPU Is (Yet)
+description: |
+  Kubernetes treats GPUs as opaque integers. In this lesson you'll discover why — then fix it.
+  Install ghostgpu on a KWOK virtual cluster, watch nodes go from zero GPU capacity to four,
+  schedule your first GPU pod, and deliberately break it by asking for more than the cluster has.
 name: lesson-gpu-fundamentals
 slug: lesson-gpu-fundamentals
 createdAt: 2026-10-04
@@ -12,7 +16,7 @@ tagz:
   - kwok
   - nvidia
 playground:
-  name: gpu-engineering-on-kubernetes-playground  # TODO: replace with real slug from labctl playground create
+  name: gpu-engineering-on-kubernetes-62a4150c
 # challenges:   (commented out — no slug yet)
 #   <platform-slug>: {}
 tasks:

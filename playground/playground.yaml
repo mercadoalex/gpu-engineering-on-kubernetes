@@ -1,8 +1,5 @@
 kind: playground
-# name is assigned by the platform at creation time — do NOT set it manually.
-# After running: labctl playground create -f playground/playground.yaml -b flexbox gpu-engineering-on-kubernetes
-# the platform prints the slug (e.g. gpu-engineering-on-kubernetes-XXXXXXXX).
-# Paste that slug here AND into every lesson index.md playground.name field.
+name: gpu-engineering-on-kubernetes-62a4150c
 base: flexbox
 title: GPU Engineering on Kubernetes
 description: |-
@@ -27,7 +24,7 @@ playground:
               # See rootfs/Dockerfile for build instructions.
               # Required tools in image: kind, kwokctl, kubectl, helm, jq, yq, curl, git, bash
               # Required K8s version: 1.31+ (DRA feature gate for ResourceSlices)
-              source: oci://ghcr.io/mercadoalex/gpu-k8s-lab:latest
+              source: oci://ghcr.io/mercadoalex/gpu-k8s-lab:latest  # built: 35bfe27
           network:
             interfaces:
                 - network: local
