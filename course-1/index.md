@@ -15,6 +15,4 @@ tagz:
 createdAt: 2026-10-04
 updatedAt: 2026-10-04
 cover: __static__/cover.png
-name: gpu-engineering-on-kubernetes-7676e499
-slug: gpu-engineering-on-kubernetes-7676e499
 ---
