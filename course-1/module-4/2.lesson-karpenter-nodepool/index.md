@@ -25,12 +25,15 @@ tasks:
     timeout_seconds: 300
     run: |
       set -e
-      if [ ! -d /workdir/.git ]; then
-        git clone https://github.com/mercadoalex/gpu-engineering-on-kubernetes.git /workdir
-      fi
       cd /workdir
       bash course-1/scripts/setup-kwok-cluster.sh
-      kubectl config use-context kind-gpu-lab
+      # Best-effort: wait for the apiserver port (derived from the kubeconfig
+      # server URL) before polling node readiness. The script already created
+      # the cluster synchronously, so this just hardens against a race.
+      PORT=$(kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}' 2>/dev/null | sed -E 's#.*:([0-9]+)/?$#\1#')
+      if [ -n "${PORT}" ]; then
+        until nc -z 127.0.0.1 "${PORT}" 2>/dev/null; do sleep 2; done
+      fi
       kubectl wait --for=condition=Ready nodes --all --timeout=120s
       echo "KWOK cluster ready ✓"
   author_karpenter_nodepool:
