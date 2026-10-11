@@ -20,6 +20,21 @@ playground:
 # challenges:   (commented out — no slug yet)
 #   <platform-slug>: {}
 tasks:
+  init_kwok_cluster:
+    init: true
+    machine: dev-machine
+    user: laborant
+    timeout_seconds: 300
+    run: |
+      set -e
+      if [ ! -d /workdir/.git ]; then
+        git clone https://github.com/mercadoalex/gpu-engineering-on-kubernetes.git /workdir
+      fi
+      cd /workdir
+      bash course-1/scripts/setup-kwok-cluster.sh
+      kubectl config use-context kind-gpu-lab
+      kubectl wait --for=condition=Ready nodes --all --timeout=120s
+      echo "KWOK cluster ready ✓"
   verify_node_allocatable:
     machine: dev-machine
     user: laborant

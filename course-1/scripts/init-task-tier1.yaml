@@ -1,0 +1,21 @@
+# init-task-tier1.yaml
+# Shared KWOK init task for all Tier 1 lessons (Course 1, Modules 1-5).
+# Embed the `init_kwok_cluster:` entry below as the FIRST task in each
+# Tier 1 lesson's `tasks:` block in index.md. Do NOT add it to Tier 2
+# lessons (Modules 6-8). Keep it byte-identical across lessons.
+tasks:
+  init_kwok_cluster:
+    init: true
+    machine: dev-machine
+    user: laborant
+    timeout_seconds: 300
+    run: |
+      set -e
+      if [ ! -d /workdir/.git ]; then
+        git clone https://github.com/mercadoalex/gpu-engineering-on-kubernetes.git /workdir
+      fi
+      cd /workdir
+      bash course-1/scripts/setup-kwok-cluster.sh
+      kubectl config use-context kind-gpu-lab
+      kubectl wait --for=condition=Ready nodes --all --timeout=120s
+      echo "KWOK cluster ready ✓"
