@@ -260,12 +260,16 @@ perspective, GPUs don't exist yet.
 ---
 :summary: Re-running this lesson? Reset first.
 ---
-`verify_no_gpu_before` checks that ghostgpu is **not** installed yet. If you're retrying
-this lesson on a cluster where ghostgpu is already running, uninstall it first:
+`verify_no_gpu_before` checks that GPU capacity has **not** been injected yet. If you're
+retrying this lesson on a cluster where you already ran the inject step, remove the
+capacity from the nodes first:
 
 ```bash
-helm uninstall ghostgpu -n kube-system
-kubectl wait --for=delete pods -l app=fake-gpu-operator -n kube-system --timeout=60s
+for n in $(kubectl get nodes -l nvidia.com/gpu.present=true -o name); do
+  kubectl patch "$n" --subresource=status --type=json \
+    -p '[{"op":"remove","path":"/status/capacity/nvidia.com~1gpu"},
+         {"op":"remove","path":"/status/allocatable/nvidia.com~1gpu"}]' 2>/dev/null || true
+done
 ```
 
 Then continue from Step 2. The remaining tasks are all idempotent.
@@ -361,75 +365,98 @@ No nvidia.com/gpu resources found — cluster is GPU-naive ✓
 
 ---
 
-## 3. Installing ghostgpu — teaching your cluster what a GPU is
+## 3. Inject GPU capacity — be the device plugin yourself
 
-**ghostgpu** (also called fake-gpu-operator) is a DaemonSet that patches KWOK
-virtual node status to inject `nvidia.com/gpu` into `status.allocatable`.
-It also creates DRA `ResourceSlices` — more on those in Section 4.
+Here's the honest truth most tutorials hide behind an operator: advertising a GPU
+to Kubernetes is **just a PATCH to the node's status**. That's it. A real NVIDIA
+device plugin does exactly one meaningful thing — it tells the kubelet "this node
+has 4 GPUs," and the kubelet writes `nvidia.com/gpu: 4` into `status.capacity`.
 
-The important point: ghostgpu simulates the same contract a real NVIDIA device plugin
-satisfies. From the Kubernetes scheduler's perspective, the result is identical to
-real GPU hardware.
+On a KWOK cluster there's no kubelet and no device plugin pod to do that for us. So
+we do it directly — we patch the node status ourselves. The scheduler cannot tell
+the difference. To it, a patched `nvidia.com/gpu: 4` is a GPU, full stop.
 
 ::image-box
 ---
 :src: __static__/ghostgpu-architecture-v1.png
-:alt: Architecture diagram showing the ghostgpu DaemonSet installation flow. A ghostgpu DaemonSet pod runs on a KWOK virtual node shown as a dashed box. An arrow from the DaemonSet to the node status is labeled 'PATCH /api/v1/nodes/{name}/status'. Three numbered steps are annotated: step 1 'ghostgpu pod starts on labeled node', step 2 'PATCH adds nvidia.com/gpu: 4 to status.allocatable', step 3 'kubectl describe node shows nvidia.com/gpu: 4 in Allocatable'. A footer note reads 'KWOK virtual nodes — no real hardware involved.'
+:alt: Diagram showing GPU capacity injection on a KWOK node. A kubectl patch command on the left sends 'PATCH /api/v1/nodes/{name}/status' to the Kubernetes API server in the center, writing nvidia.com/gpu: 4 into the node's status.allocatable and status.capacity. On the right, the kube-scheduler reads the node and now sees 4 schedulable GPUs. A footer note reads 'KWOK virtual node — no kubelet, no device plugin, no real hardware. The status patch IS the GPU.'
 :max-width: 860px
 ---
-_ghostgpu's DaemonSet patches each KWOK node's status.allocatable via the Kubernetes API — no real GPU hardware involved._
-::
-
-**Activity — Terminal:** Install ghostgpu via Helm:
-
-```bash
-# Add the KWOK fake-gpu-operator Helm repository
-# Source: https://github.com/kubernetes-sigs/kwok/tree/main/charts/fake-gpu-operator
-helm repo add fake-gpu-operator https://kwok.sigs.k8s.io/charts
-helm repo update
-
-# Install ghostgpu into kube-system
-# gpu.count: number of GPUs per virtual node
-# gpu.memory: VRAM per GPU in MiB (24576 MiB = 24 GB, matching an NVIDIA L4)
-helm install ghostgpu fake-gpu-operator/fake-gpu-operator \
-  --namespace kube-system \
-  --set gpu.count=4 \
-  --set gpu.memory=24576
-```
-
-> ⏱️ This can take 30–60 seconds for the DaemonSet to start and patch all nodes.
-
-Watch the DaemonSet roll out:
-
-```bash
-kubectl rollout status daemonset -n kube-system --timeout=120s
-```
-
-::hint-box
----
-:summary: Is ghostgpu safe to use on a real cluster? Will it affect real GPU nodes?
----
-ghostgpu is designed for KWOK virtual clusters used in labs and testing. Do NOT
-install it on a cluster with real GPU nodes — it would overwrite the real device
-plugin's reported capacity with fake values, breaking GPU scheduling for real workloads.
-
-If you're running this lesson on the iximiuz playground, you're on a KWOK virtual
-cluster. Real GPU hardware is introduced in Module 6 on GCP.
+_On KWOK you patch `nvidia.com/gpu` straight into the node status — the same field a real device plugin makes the kubelet write. The scheduler treats both identically._
 ::
 
 ::hint-box
 ---
-:summary: What does DRA mean? Do I need to understand it now?
+:summary: Why not use the fake-gpu-operator / a real device plugin here?
 ---
-DRA stands for **Dynamic Resource Allocation** — a newer Kubernetes API for
-hardware resources that's more expressive than the extended resource integer model.
-Instead of just counting units, DRA can describe structured resource attributes
-(memory, topology, NUMA node, etc.) via `ResourceSlice` objects.
+A real device plugin (and tools like run.ai's fake-gpu-operator) run as a **pod on
+the node** that registers GPUs with the kubelet over a gRPC socket. KWOK nodes have
+**no kubelet**, and KWOK only *simulates* pods — they show `Running` but their
+containers never actually execute. So an operator's pods would be a façade: green
+status, but their code never runs and no capacity ever gets patched.
 
-You don't need to understand DRA internals to complete this lesson. ghostgpu
-creates `ResourceSlices` alongside the extended resource patch so the cluster
-matches what a real NVIDIA GPU Operator would produce. You'll revisit DRA in
-Module 5 when you work with real GPU Operator.
+Patching the node status directly is the reliable KWOK-native approach — and it
+teaches you exactly what a device plugin accomplishes, without the moving parts.
+You'll meet the real NVIDIA device plugin on real hardware in Module 6.
+::
+
+**Activity — Terminal:** Inject GPU capacity. The repo ships a small script that
+patches every GPU node — but let's do it by hand first so you see the mechanism:
+
+```bash
+# Patch one node's status: add nvidia.com/gpu to capacity AND allocatable.
+# --subresource=status is required — nvidia.com/gpu lives under .status, not .spec.
+kubectl patch node gpu-worker-1 --subresource=status --type=merge -p '{
+  "status": {
+    "capacity":    {"nvidia.com/gpu": "4"},
+    "allocatable": {"nvidia.com/gpu": "4"}
+  }
+}'
+```
+
+Confirm it took:
+
+```bash
+kubectl get node gpu-worker-1 -o json | jq '.status.allocatable["nvidia.com/gpu"]'
+```
+
+You should see `"4"`. Now do all the GPU nodes at once with the course script:
+
+```bash
+bash /workdir/course-1/scripts/install-ghostgpu.sh
+```
+
+> The script name is `install-ghostgpu.sh` for continuity with the course, but as
+> you now know, it isn't installing an operator — it's patching node status. That's
+> the whole trick.
+
+::hint-box
+---
+:summary: Would this patch work on a REAL cluster?
+---
+On a real cluster you would **never** patch GPU capacity by hand — the NVIDIA
+device plugin does it for you based on the actual hardware it detects, and
+overwriting that would break real scheduling. This direct-patch technique is
+specific to KWOK simulation, where there's no hardware and no plugin.
+
+The value is conceptual: you've now seen that "advertising a GPU" is nothing more
+than a number in node status. That demystifies everything the GPU Operator does in
+Module 6 — it's a lot of machinery whose end result is the same patch you just did.
+::
+
+::hint-box
+---
+:summary: What about DRA — the newer Dynamic Resource Allocation API?
+---
+DRA (**Dynamic Resource Allocation**) is a newer Kubernetes API for hardware that's
+more expressive than the extended-resource integer model. Instead of just counting
+units, DRA describes structured attributes (memory, topology, NUMA node) via
+`ResourceSlice` objects and `ResourceClaim`s.
+
+This lesson uses the classic **extended resource** path (`nvidia.com/gpu` as an
+integer) because it's what the vast majority of real GPU clusters still run today,
+and it's the clearest way to see how the scheduler accounts for GPUs. DRA is a
+dedicated topic — you'll build a ResourceSlice-based setup in Module 2.
 ::
 
 ::simple-task
@@ -438,18 +465,19 @@ Module 5 when you work with real GPU Operator.
 :name: verify_ghostgpu_installed
 ---
 #active
-In the **Terminal**, run `helm list -n kube-system` and confirm the **ghostgpu**
-release shows status **deployed**.
+In the **Terminal**, run the inject step (`install-ghostgpu.sh`, or the manual
+`kubectl patch`) and confirm at least one node now has `nvidia.com/gpu` in its
+`status.capacity`.
 
 #completed
-ghostgpu Helm release deployed ✓
+GPU capacity injected into node status ✓
 ::
 
 ---
 
 ## 4. Your cluster can see GPUs now
 
-With ghostgpu running, every virtual node should now report `nvidia.com/gpu` in its
+With the status patch applied, every virtual node now reports `nvidia.com/gpu` in its
 allocatable resources.
 
 **Activity — Terminal:** Compare before and after:
@@ -459,7 +487,7 @@ allocatable resources.
 kubectl get nodes -o json | jq '.items[] | {name: .metadata.name, gpu: .status.allocatable["nvidia.com/gpu"]}'
 ```
 
-You should see `"gpu": "4"` on each node — the value you set with `--set gpu.count=4`.
+You should see `"gpu": "4"` on each node — the value the inject step patched in.
 
 Check the overall cluster GPU inventory:
 
@@ -468,15 +496,18 @@ kubectl get nodes -o custom-columns=\
 'NAME:.metadata.name,CPU:.status.allocatable.cpu,MEM:.status.allocatable.memory,GPU:.status.allocatable.nvidia\.com/gpu'
 ```
 
-Now check if DRA ResourceSlices are present:
+We advertised GPUs the classic way — an extended-resource integer in node status.
+The newer DRA model would instead describe each GPU as a `ResourceSlice` object:
 
 ```bash
-kubectl get resourceslices.resource.k8s.io 2>/dev/null || echo 'DRA ResourceSlices not available in this K8s version'
+# We didn't create any ResourceSlices, so this returns none (or "No resources found").
+# That's expected — we used the extended-resource path, not DRA.
+kubectl get resourceslices.resource.k8s.io 2>/dev/null || echo 'DRA API not enabled in this cluster'
 ```
 
-If your cluster is Kubernetes 1.31+ and has the DRA feature gate enabled, you'll see
-`ResourceSlice` objects — one per virtual GPU per node. On older versions, only the
-extended resource integer is used.
+No ResourceSlices — because we didn't create any. You'll build a DRA-based GPU
+setup in Module 2 and see how `ResourceSlice` objects differ from the integer
+`nvidia.com/gpu` count you just patched.
 
 ::hint-box
 ---
@@ -663,19 +694,22 @@ kubectl delete pod gpu-greedy
 
 ## Now Prove It
 
-You've installed ghostgpu, scheduled a GPU pod, and seen what `Insufficient nvidia.com/gpu` looks like.
+You've injected GPU capacity by patching node status, scheduled a GPU pod, and seen
+what `Insufficient nvidia.com/gpu` looks like.
 
 Here's a self-directed challenge to close the loop:
 
-**Without looking at the scripts or manifests**, recreate the state from scratch on a clean cluster:
+**Without looking at the scripts**, recreate the state from scratch:
 
-1. Delete the `gpu-test` pod and uninstall ghostgpu.
-2. Confirm the cluster shows zero GPU capacity.
-3. Re-install ghostgpu with a different GPU count (`--set gpu.count=2`).
+1. Delete the `gpu-test` pod, then remove `nvidia.com/gpu` from every node's status
+   (patch it away, the reverse of what you did in Section 3).
+2. Confirm the cluster shows zero GPU capacity again.
+3. Re-inject capacity, but this time patch **2** GPUs per node instead of 4.
 4. Schedule a pod requesting 2 GPUs — it should land. Then try requesting 3 — it should `Pending`.
 
 There's no automated check for this part. The point is that you can reconstruct the full flow
-from memory. If you can do that, you're ready for Module 2.
+from memory — and that you understand GPU capacity is just a number you control in node status.
+If you can do that, you're ready for Module 2.
 
 <!-- TODO: Add platform challenge card once labctl assigns a slug
 ::card

@@ -218,6 +218,27 @@ and works correctly — regular tasks run after the playground is up with no `in
   On native amd64 (the real Firecracker runtime) it's ~10s. Do not quote emulated
   timings to students, and give the health-check loop generous headroom.
 
+## GPU simulation on KWOK: patch node status, do NOT use a device-plugin operator
+
+The run.ai fake-gpu-operator (and any real device plugin) runs as a **pod on the
+node** that registers GPUs with the kubelet. KWOK has **no kubelet** and only
+*simulates* pods — they show `Running` but their containers never execute (hence
+"no logs found" for a Running pod). So the operator's pods are a façade: their
+GPU-injection code never runs, and `nvidia.com/gpu` never appears.
+
+**The reliable KWOK-native way to advertise a GPU is a direct node-status patch:**
+
+```bash
+kubectl patch node <node> --subresource=status --type=merge -p '{
+  "status": {"capacity": {"nvidia.com/gpu": "4"}, "allocatable": {"nvidia.com/gpu": "4"}}
+}'
+```
+
+`--subresource=status` is required (the field lives under `.status`, not `.spec`).
+This is exactly what a real device plugin makes the kubelet write — so it's also a
+good teaching device. Save the device-plugin/GPU-Operator machinery for the Tier 2
+(real GPU) modules.
+
 ## Service startup times (reference)
 
 | Service | Port | Time to ready (cold boot, 2 GiB microVM) |

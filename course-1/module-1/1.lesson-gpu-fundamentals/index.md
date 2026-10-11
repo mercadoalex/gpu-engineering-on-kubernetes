@@ -68,9 +68,11 @@ tasks:
     machine: dev-machine
     user: laborant
     run: |
-      # Verify ghostgpu Helm release exists
-      helm list -n kube-system --filter ghostgpu -o json | jq -e '.[0].status == "deployed"' > /dev/null 2>&1 || { echo "ghostgpu Helm release not found in kube-system"; exit 1; }
-      echo "ghostgpu Helm release deployed ✓"
+      # Verify GPU capacity was injected onto at least one node via status patch.
+      # (On KWOK we patch node status directly — there is no Helm release to check.)
+      INJECTED=$(kubectl get nodes -o json | jq '[.items[] | select(.status.capacity["nvidia.com/gpu"] != null)] | length')
+      [ "${INJECTED:-0}" -ge 1 ] || { echo "No node has nvidia.com/gpu capacity yet — run install-ghostgpu.sh"; exit 1; }
+      echo "GPU capacity injected on $INJECTED node(s) ✓"
 
   verify_gpu_capacity:
     machine: dev-machine
