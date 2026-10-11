@@ -17,6 +17,14 @@ updatedAt: 2026-10-04
 cover: __static__/cover.png
 ---
 
+## The GPU is the engine of the AI era
+
+Every chatbot you've talked to, every image a model has generated, every recommendation feed, every self-driving demo, every protein-folding breakthrough — all of it runs on GPUs. The models get the headlines, but the GPUs do the work. They are the physical substrate the entire AI boom is built on.
+
+And here's the gap: the world has a flood of people who can call an AI API, and a shortage of people who can **run the infrastructure underneath it**. When a company brings AI in-house — for cost, privacy, or control — someone has to make the GPUs actually work on Kubernetes: schedule them, share them across teams, keep them healthy, and stop them from quietly burning the budget. That someone is a GPU infrastructure engineer. There aren't many of them. They're paid like it.
+
+This course makes you one of them.
+
 ## What this course is
 
 GPUs are the most expensive, most contended resource in a modern Kubernetes cluster — and the one Kubernetes understands the least. This course teaches you to operate them like an engineer, not a tourist: schedule them fairly, quota them across teams, watch them for failure, and serve real LLM inference on them.
