@@ -109,6 +109,48 @@ of a custom resource are available. The kubelet patches `node.status.capacity`
 with that count. The scheduler then sees it as an allocatable resource — and it
 knows nothing about what that resource actually is.
 
+So what does `node.status.capacity` actually look like? It's a field inside the
+Node object, which Kubernetes stores as structured data. When you ask for it, you
+get YAML (or JSON) — a plain map of resource name to quantity:
+
+```yaml
+# kubectl get node <name> -o yaml  → status.capacity section
+status:
+  capacity:
+    cpu: "32"
+    memory: 131072000Ki
+    pods: "110"
+    ephemeral-storage: 209715200Ki
+    nvidia.com/gpu: "4"        # ← patched in by the device plugin
+  allocatable:
+    cpu: "31500m"
+    memory: 130023424Ki
+    pods: "110"
+    ephemeral-storage: 193379953Ki
+    nvidia.com/gpu: "4"        # ← same count; GPUs have no system reservation
+```
+
+Notice `nvidia.com/gpu` sits right next to `cpu` and `memory` as if it were a
+built-in resource. To the scheduler, it is — just another key with a number.
+
+::hint-box
+---
+:summary: Is the device-plugin-to-kubelet message also YAML?
+---
+No — that part is **gRPC (protobuf)**, binary on the wire, not YAML or plain text.
+The device plugin implements a gRPC service and streams a `ListAndWatchResponse`
+protobuf message listing the devices. You never see that message directly; it lives
+between the plugin and the kubelet over a Unix socket.
+
+What you *do* see — and what's shown above — is the **result**: the kubelet takes
+that gRPC message and patches the Node object's `status.capacity`. The Node object
+is stored as JSON in etcd and rendered as YAML or JSON by `kubectl`. So:
+
+- **Plugin → kubelet:** gRPC / protobuf (invisible)
+- **Kubelet → API server:** a PATCH to the Node object (JSON)
+- **What you query:** `kubectl get node -o yaml` → human-readable YAML
+::
+
 ::image-box
 ---
 :src: __static__/device-plugin-arch-v1.png
