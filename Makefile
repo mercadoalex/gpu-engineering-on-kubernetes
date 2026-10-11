@@ -9,9 +9,10 @@ LATEST_TAG := $(REGISTRY)/$(IMAGE_NAME):latest
 
 LAB_USER           ?= laborant
 KUBECTL_VERSION    ?= v1.31.3
-KIND_VERSION       ?= v0.24.0
 KWOKCTL_VERSION    ?= v0.6.0
 HELM_VERSION       ?= v3.16.3
+KUBE_VERSION       ?= v1.31.3
+ETCD_VERSION       ?= 3.5.15-0
 
 .PHONY: all build push tag-latest run shell clean help
 
@@ -25,9 +26,10 @@ build: check-docker
 		--platform linux/amd64 \
 		--build-arg LAB_USER=$(LAB_USER) \
 		--build-arg KUBECTL_VERSION=$(KUBECTL_VERSION) \
-		--build-arg KIND_VERSION=$(KIND_VERSION) \
 		--build-arg KWOKCTL_VERSION=$(KWOKCTL_VERSION) \
 		--build-arg HELM_VERSION=$(HELM_VERSION) \
+		--build-arg KUBE_VERSION=$(KUBE_VERSION) \
+		--build-arg ETCD_VERSION=$(ETCD_VERSION) \
 		-t $(FULL_TAG) \
 		-t $(REGISTRY)/$(IMAGE_NAME):dev \
 		-f $(CUR_DIR)/rootfs/Dockerfile \

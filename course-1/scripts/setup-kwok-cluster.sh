@@ -1,56 +1,61 @@
 #!/usr/bin/env bash
-# setup-kwok-cluster.sh — Creates a kind cluster and installs the KWOK controller
-# with 3 virtual GPU worker nodes for the GPU Engineering on Kubernetes course.
+# setup-kwok-cluster.sh — Brings up a kwokctl *binary-runtime* cluster (etcd +
+# kube-apiserver + kwok as plain Linux binaries — no Docker, no kind) with 3
+# virtual GPU worker nodes for the GPU Engineering on Kubernetes course.
+#
+# The cluster binaries are pre-cached in the lab image at build time (see
+# rootfs/Dockerfile), so this script runs fully OFFLINE and completes in <30s.
 #
 # Usage: bash course-1/scripts/setup-kwok-cluster.sh
 set -euo pipefail
 
-CLUSTER_NAME="gpu-lab"
-KWOK_REPO="kubernetes-sigs/kwok"
+CLUSTER_NAME="kwok"
+KUBE_VERSION="v1.31.3"
 
 # ── Dependency checks ──────────────────────────────────────────────────────────
+# kwokctl ships the binary runtime (etcd + kube + kwok), so no kind/docker needed.
+# helm is used only by the separate ghostgpu script, not here.
 check_dep() {
   command -v "$1" &>/dev/null || { echo "ERROR: $1 is required but not found. Install it and retry."; exit 1; }
 }
-check_dep kind
+check_dep kwokctl
 check_dep kubectl
-check_dep helm
 check_dep jq
 
 echo "✓ Dependencies OK"
 
-# ── Create kind cluster ────────────────────────────────────────────────────────
-if kind get clusters 2>/dev/null | grep -q "^${CLUSTER_NAME}$"; then
-  echo "ℹ️  kind cluster '${CLUSTER_NAME}' already exists — skipping create"
+# ── Create the kwokctl binary-runtime cluster ──────────────────────────────────
+# Idempotent: skip create if the cluster already exists.
+if kwokctl get clusters 2>/dev/null | grep -q "^${CLUSTER_NAME}$"; then
+  echo "ℹ️  kwok cluster '${CLUSTER_NAME}' already exists — skipping create"
 else
-  echo "→ Creating kind cluster '${CLUSTER_NAME}'..."
-  kind create cluster --name "${CLUSTER_NAME}" --wait 60s
-  echo "✓ kind cluster created"
+  echo "→ Creating kwok binary-runtime cluster '${CLUSTER_NAME}' (kube ${KUBE_VERSION})..."
+  kwokctl create cluster \
+    --name "${CLUSTER_NAME}" \
+    --runtime=binary \
+    --kube-version="${KUBE_VERSION}"
+  echo "✓ kwok cluster created"
 fi
 
-# Set kubectl context
-kubectl config use-context "kind-${CLUSTER_NAME}"
-
-# ── Install KWOK controller ────────────────────────────────────────────────────
-# KWOK turns the kind cluster into a hybrid: the kind control-plane handles
-# the API server, and KWOK simulates virtual worker nodes.
-echo "→ Installing KWOK controller..."
-KWOK_LATEST=$(curl -s "https://api.github.com/repos/${KWOK_REPO}/releases/latest" | jq -r '.tag_name')
-echo "   KWOK version: ${KWOK_LATEST}"
-
-# Install KWOK CRDs and controller
-kubectl apply -f "https://github.com/${KWOK_REPO}/releases/download/${KWOK_LATEST}/kwok.yaml"
-
-# Install fast simulation stages (pod/node lifecycle simulation)
-kubectl apply -f "https://github.com/${KWOK_REPO}/releases/download/${KWOK_LATEST}/stage-fast.yaml"
-
-# Wait for the KWOK controller to be ready
-kubectl rollout status deployment/kwok-controller -n kube-system --timeout=120s
-echo "✓ KWOK controller ready"
+# ── Select the kubectl context ─────────────────────────────────────────────────
+# kwokctl's binary runtime writes a kubeconfig context named kwok-<name>.
+# Detect it rather than hardcoding so it survives a cluster-name change.
+CTX="kwok-${CLUSTER_NAME}"
+if ! kubectl config get-contexts -o name 2>/dev/null | grep -q "^${CTX}$"; then
+  echo "ERROR: expected kubeconfig context '${CTX}' not found."
+  echo "       Available contexts:"; kubectl config get-contexts -o name || true
+  exit 1
+fi
+kubectl config use-context "${CTX}"
+echo "✓ Using context '${CTX}'"
 
 # ── Create virtual GPU worker nodes ───────────────────────────────────────────
-# These are KWOK-managed nodes — no real VMs are created. They appear in
-# kubectl get nodes as Ready but all pod execution is simulated by KWOK.
+# These are KWOK-managed nodes — no real VMs. The kwok controller (bundled in the
+# binary runtime) owns the heartbeat and the Ready condition for any node carrying
+# the kwok.x-k8s.io/node: fake annotation, so we DON'T hardcode status.conditions
+# or lastHeartbeatTime (a stale timestamp fails the Ready freshness check).
+# NOTE: we deliberately do NOT add nvidia.com/gpu capacity here — ghostgpu injects
+# it in a later lesson (verify_no_gpu_before asserts its absence first).
 echo "→ Creating KWOK virtual GPU nodes..."
 for i in 1 2 3; do
   NODE_NAME="gpu-worker-${i}"
@@ -84,30 +89,21 @@ status:
     memory: 128Gi
     pods: "110"
     ephemeral-storage: 200Gi
-  conditions:
-  - lastHeartbeatTime: "2026-10-04T00:00:00Z"
-    lastTransitionTime: "2026-10-04T00:00:00Z"
-    message: kubelet is posting ready status
-    reason: KubeletReady
-    status: "True"
-    type: Ready
   nodeInfo:
     architecture: amd64
     containerRuntimeVersion: containerd://1.7.0
     kernelVersion: 5.15.0-fake
-    kubeProxyVersion: v1.29.0
-    kubeletVersion: v1.29.0
+    kubeProxyVersion: v1.31.3
+    kubeletVersion: v1.31.3
     operatingSystem: linux
     osImage: Ubuntu 22.04 LTS (simulated)
 EOF
   echo "   ✓ ${NODE_NAME} created"
 done
 
-# Wait for nodes to report Ready
+# ── Wait for nodes to report Ready ──────────────────────────────────────────────
 echo "→ Waiting for virtual nodes to be Ready..."
-for i in 1 2 3; do
-  kubectl wait node "gpu-worker-${i}" --for=condition=Ready --timeout=60s
-done
+kubectl wait --for=condition=Ready nodes --all --timeout=60s
 echo "✓ All 3 virtual nodes are Ready"
 
 # ── Summary ────────────────────────────────────────────────────────────────────

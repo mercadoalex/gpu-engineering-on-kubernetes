@@ -117,6 +117,27 @@ init_wait_for_child_service:
 | Child service init times out at 300 s | Task starts polling before parent service is up | Add `sleep 30` |
 | Two init tasks both time out simultaneously | Parallel fire burning the same timeout window | Tasks are independent by design — use `sleep` stagger |
 
+## KWOK binary runtime: warm the cache at build time, not boot
+
+The kwokctl **binary runtime** (`kwokctl create cluster --runtime=binary`) runs
+etcd + kube-apiserver + kube-controller-manager + kube-scheduler + kwok as plain
+Linux binaries. On the FIRST `create cluster`, kwokctl downloads those binaries
+(kube from dl.k8s.io, etcd image tag matching the K8s minor) and caches them.
+
+- **Warm the cache during the image BUILD, never at boot.** A microVM boots with
+  no network guarantees and the init-task timeout is short — downloading kube+etcd
+  at boot is exactly what hangs the "Warming up playground" spinner. Run a throwaway
+  `create cluster` + `delete cluster` in the Dockerfile so the cache is already
+  populated; the delete frees the ephemeral cluster but the cached binaries persist.
+- **The cache is home-dir relative** (`~/.kwok/cache/kubernetes/<KUBE_VERSION>/...`),
+  so the warm-up MUST run as the SAME user the playground runs as (`laborant`), not
+  root. Caching to `/root/.kwok` is invisible to `laborant` at runtime.
+- **Bake the repo in; don't clone at boot.** Copy the course repo into the image
+  (`/opt/gpu-k8s-lab`, with `/workdir` symlinked to it) so init tasks never `git clone`.
+- **Init tasks only WAIT — they never build.** The setup script creates the cluster
+  synchronously (offline, <30s); the init task just runs it then `kubectl wait`s for
+  nodes Ready. No downloads, no `curl .../releases/latest`.
+
 ## Critical: `init: true` must ONLY appear on real init tasks
 
 Adding `init: true` to regular (student-facing) tasks causes the "Warming up
@@ -143,7 +164,7 @@ and works correctly — regular tasks run after the playground is up with no `in
 
 | Service | Port | Time to ready (cold boot, 2 GiB microVM) |
 |---|---|---|
-| Kubernetes API server (kind) | 6443 | 30–60 s |
+| Kubernetes API server (kwokctl binary runtime) | dynamic | <10 s (binaries pre-cached) |
 | KWOK nodes reporting Ready | — | 5–10 s after API server |
 | Kueue controller | — | 10–20 s after API server |
 | Prometheus | 9090 | 15–30 s |
