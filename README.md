@@ -64,26 +64,34 @@ shared multi-student labs.
 
 ## How to run Tier 1 locally
 
+The lab uses **kwokctl's binary runtime** — a full simulated cluster (etcd +
+kube-apiserver + kwok controller) running as plain Linux binaries. No kind, no
+Docker, no VM. This is the same mechanism baked into the playground image, so you
+can reproduce the lab environment on any Linux host (or in a Linux container).
+
 ### 1. Install dependencies
 
 ```bash
-# kind — local Kubernetes cluster
-curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.25.0/kind-linux-amd64
-chmod +x ./kind && sudo mv ./kind /usr/local/bin/kind
+# kubectl
+curl -fsSL -o kubectl https://dl.k8s.io/release/v1.31.3/bin/linux/amd64/kubectl
+chmod +x kubectl && sudo mv kubectl /usr/local/bin/kubectl
 
-# kwokctl — KWOK cluster controller
-KWOK_LATEST=$(curl -s https://api.github.com/repos/kubernetes-sigs/kwok/releases/latest | grep tag_name | cut -d'"' -f4)
-curl -Lo kwokctl https://github.com/kubernetes-sigs/kwok/releases/download/${KWOK_LATEST}/kwokctl-linux-amd64
+# kwokctl — ships the binary runtime (etcd + kube + kwok)
+curl -fsSL -o kwokctl https://github.com/kubernetes-sigs/kwok/releases/download/v0.6.0/kwokctl-linux-amd64
 chmod +x kwokctl && sudo mv kwokctl /usr/local/bin/kwokctl
 
-# helm — package manager
+# helm — used by the ghostgpu install step
 curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+# jq — used by the setup/validation scripts
+sudo apt-get install -y jq   # or: brew install jq
 ```
 
 ### 2. Create the simulation cluster
 
 ```bash
-# Creates a kind cluster + installs KWOK controller + deploys virtual GPU nodes
+# Creates a kwokctl binary-runtime cluster + 3 virtual GPU nodes.
+# Pins the Kubernetes version via KWOK_KUBE_VERSION (kwokctl has no --kube-version flag).
 bash course-1/scripts/setup-kwok-cluster.sh
 ```
 
@@ -97,10 +105,16 @@ bash course-1/scripts/install-ghostgpu.sh
 ### 4. Verify the setup
 
 ```bash
-# Should show >= 2 Ready nodes with nvidia.com/gpu in their allocatable resources
+# Should show 3 Ready gpu-worker nodes
 kubectl get nodes
+
+# After ghostgpu is installed, each node reports nvidia.com/gpu in allocatable
 kubectl get nodes -o json | jq '.items[] | {name: .metadata.name, gpu: .status.allocatable["nvidia.com/gpu"]}'
 ```
+
+> **Note:** `kwokctl --runtime=binary` downloads the kube/etcd binaries from
+> `dl.k8s.io` on the first `create`. The playground image pre-caches these at build
+> time so boot is offline; running locally, the first create needs network access.
 
 ---
 
