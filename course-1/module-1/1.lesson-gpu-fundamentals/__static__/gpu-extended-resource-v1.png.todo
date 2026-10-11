@@ -1,1 +1,0 @@
-Diagram: A K8s node with status.allocatable showing cpu:8, memory:32Gi, nvidia.com/gpu:0. A red X over a GPU chip. Label: "Without device plugin, K8s cannot allocate GPU resources." Side-by-side with the same node after ghostgpu: status.allocatable showing nvidia.com/gpu:4. A green checkmark.

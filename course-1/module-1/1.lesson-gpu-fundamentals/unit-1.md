@@ -12,7 +12,7 @@ A GPU is the opposite shape. Instead of a handful of clever cores, it has **thou
 
 ::image-box
 ---
-:src: __static__/cpu-vs-gpu-v1.png
+:src: __static__/cpu-vs-gpu-v2.png
 :alt: Side-by-side comparison illustration. Left panel labeled "CPU" shows 8 large glowing blue cores arranged in a grid, each with a gear icon suggesting complex logic, with the caption "a few powerful cores — fast at one task at a time". Right panel labeled "GPU" shows a dense grid of hundreds of small green cores all lit up simultaneously, with the caption "thousands of simple cores — the same operation across huge data, all at once". Below both panels, a shared timeline bar shows the CPU processing matrix operations sequentially (a long thin bar) versus the GPU processing them in parallel (a short wide bar), with the label "same AI workload: GPU finishes 10–100x sooner".
 :max-width: 860px
 ---

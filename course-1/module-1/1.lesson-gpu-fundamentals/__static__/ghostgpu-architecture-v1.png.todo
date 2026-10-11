@@ -1,1 +1,0 @@
-Diagram: ghostgpu DaemonSet pod running on a KWOK virtual node. Arrow from DaemonSet to node status.allocatable showing the patch operation. Labels: "1. ghostgpu pod starts", "2. PATCH /api/v1/nodes/{name}/status", "3. nvidia.com/gpu: 4 appears in allocatable". Footer note: KWOK virtual nodes — no real hardware involved.
