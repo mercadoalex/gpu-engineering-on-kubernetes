@@ -1,0 +1,52 @@
+# kwok-cluster.service — owns the KWOK binary-runtime GPU cluster.
+#
+# WHY THIS SERVICE EXISTS
+# The cluster MUST be owned by a long-lived PID-1-rooted process, not by an
+# iximiuz init task. The examiner reaps an init task's ENTIRE process tree when
+# the task completes, which killed the etcd/kube-apiserver/kwok-controller
+# processes the old init task spawned. systemd (PID 1) persists for the VM
+# lifetime, so a service it owns survives. The init task now only WAITS for this
+# service to be ready.
+#
+# TYPE DECISION: Type=oneshot + RemainAfterExit=yes + KillMode=process
+#   setup-kwok-cluster.sh runs SYNCHRONOUSLY: it creates the cluster (kwokctl's
+#   binary runtime double-forks etcd/apiserver/controller-manager/scheduler/kwok
+#   as detached processes) and then returns 0. Type=oneshot models a run-to-
+#   completion command exactly. RemainAfterExit=yes keeps the unit "active" after
+#   ExecStart returns so systemd does not treat the exit as the service going down.
+#
+#   KillMode=process is the CRITICAL flag. systemd's default KillMode=control-group
+#   would kill every process in the unit's cgroup — including the detached kwok
+#   children — the moment the oneshot ExecStart process exits, reproducing the
+#   exact examiner-reap bug at the systemd layer. KillMode=process makes systemd
+#   signal ONLY the main (ExecStart) process on stop, leaving the cluster children
+#   running for the VM lifetime. This was verified empirically: with KillMode=process
+#   a fresh (non-launching) shell sees 3 Ready nodes and all three processes alive;
+#   see .agents/tasks/kwok-systemd-fix/verify-report.md.
+#
+#   Type=forking was rejected: kwokctl launches several independent binaries and
+#   exposes no single long-lived daemon PID/PID-file for systemd to track.
+#
+# RUNS AS laborant WITH HOME=/home/laborant so kwokctl reuses the build-time-warmed
+# cache (/home/laborant/.kwok/cache) and writes the kubeconfig to the DEFAULT
+# /home/laborant/.kube/config, where the laborant login shell and the examiner read
+# it with NO manual KUBECONFIG export.
+
+[Unit]
+Description=KWOK binary-runtime GPU cluster (persists for VM lifetime)
+After=network.target
+Wants=network.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+KillMode=process
+User=laborant
+Group=laborant
+Environment=HOME=/home/laborant
+Environment=KWOK_KUBE_VERSION=v1.31.3
+WorkingDirectory=/opt/gpu-k8s-lab
+ExecStart=/usr/bin/env bash course-1/scripts/setup-kwok-cluster.sh
+
+[Install]
+WantedBy=multi-user.target

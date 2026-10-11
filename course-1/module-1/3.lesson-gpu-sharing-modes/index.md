@@ -28,16 +28,24 @@ tasks:
     timeout_seconds: 300
     run: |
       set -e
-      cd /workdir
-      bash course-1/scripts/setup-kwok-cluster.sh
-      # Best-effort: wait for the apiserver port (derived from the kubeconfig
-      # server URL) before polling node readiness. The script already created
-      # the cluster synchronously, so this just hardens against a race.
-      PORT=$(kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}' 2>/dev/null | sed -E 's#.*:([0-9]+)/?$#\1#')
-      if [ -n "${PORT}" ]; then
-        until nc -z 127.0.0.1 "${PORT}" 2>/dev/null; do sleep 2; done
-      fi
-      kubectl wait --for=condition=Ready nodes --all --timeout=120s
+      # The KWOK cluster is created and kept alive by the kwok-cluster.service
+      # systemd unit baked into the image (NOT by this init task). The examiner
+      # reaps an init task's process tree on completion, so a cluster created
+      # here would die. This task only WAITS for the systemd-managed cluster.
+      # Wait for the apiserver port derived from the kubeconfig the service wrote.
+      echo "Waiting for the systemd-managed KWOK cluster..."
+      for i in $(seq 1 60); do
+        PORT=$(kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}' 2>/dev/null | sed -E 's#.*:([0-9]+)/?$#\1#')
+        if [ -n "${PORT}" ] && nc -z 127.0.0.1 "${PORT}" 2>/dev/null; then
+          break
+        fi
+        sleep 5
+      done
+      # Loop until 3 nodes report Ready (or the 300s task timeout fires).
+      until [ "$(kubectl get nodes --no-headers 2>/dev/null | grep -c ' Ready ')" -ge 3 ]; do
+        echo "Waiting for 3 Ready nodes..."
+        sleep 5
+      done
       echo "KWOK cluster ready ✓"
   label_nodes_sharing_modes:
     machine: dev-machine

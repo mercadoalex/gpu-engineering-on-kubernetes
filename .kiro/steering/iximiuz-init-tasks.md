@@ -138,6 +138,38 @@ Linux binaries. On the FIRST `create cluster`, kwokctl downloads those binaries
   synchronously (offline, <30s); the init task just runs it then `kubectl wait`s for
   nodes Ready. No downloads, no `curl .../releases/latest`.
 
+## Long-lived processes MUST be systemd services, not init tasks
+
+The iximiuz examiner **reaps the init task's entire process tree** when the task
+completes. Any long-lived process started by an init task is therefore KILLED the
+moment the "Warming up playground" spinner clears. This bit the KWOK cluster: an
+init task that ran `setup-kwok-cluster.sh` started etcd + kube-apiserver +
+kwok-controller as detached children, and all three were reaped on task
+completion — the student terminal then showed no cluster (`kwokctl get clusters`
+empty, `kubectl` connection refused), even though running the same script by hand
+in the login shell worked (those children belong to the login shell, not the
+reaped init task).
+
+**Rule:** a long-lived process (notably a `kwokctl` binary-runtime cluster) MUST
+be owned by a **systemd service baked into the image** — systemd is PID 1 and
+persists for the VM lifetime, so a service it owns survives. Enable the unit in
+the Dockerfile (`COPY` the `.service` file + `systemctl enable`). The init task's
+ONLY job is to **WAIT** for the systemd-managed service to be ready: poll the
+apiserver port (`nc -z`), then loop until `kubectl get nodes` shows the expected
+Ready nodes. The init task must never create the cluster.
+
+**`KillMode=process` is required** on the service. For a `Type=oneshot` +
+`RemainAfterExit=yes` unit whose `ExecStart` creates the cluster then returns,
+systemd's default `KillMode=control-group` would kill the whole cgroup — including
+the detached cluster children — when the ExecStart process exits, reproducing the
+examiner-reap bug at the systemd layer. `KillMode=process` makes systemd signal
+only the main process on stop, leaving the cluster children alive. Run the service
+as the lab user (`laborant`) with `HOME=/home/laborant` so it reuses the
+build-time-warmed cache and writes the kubeconfig to the default
+`~/.kube/config` the login shell reads.
+
+---
+
 ## Critical: `init: true` must ONLY appear on real init tasks
 
 Adding `init: true` to regular (student-facing) tasks causes the "Warming up

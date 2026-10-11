@@ -24,25 +24,51 @@ check_dep jq
 
 echo "✓ Dependencies OK"
 
-# ── Create the kwokctl binary-runtime cluster ──────────────────────────────────
-# Idempotent: skip create if the cluster already exists.
+CTX="kwok-${CLUSTER_NAME}"
+
+# ── Fast idempotent early-exit ─────────────────────────────────────────────────
+# The cluster is owned by the kwok-cluster.service systemd unit and persists for
+# the VM lifetime. This script is run both by that service (at boot) and can be
+# re-run by hand or by `systemctl restart`. If the cluster ALREADY exists AND its
+# apiserver is serving /healthz=ok, there is nothing to do: select the context so
+# the caller's kubeconfig points at it and exit 0 immediately.
+#
+# NOTE: `kwokctl get clusters` only confirms the cluster METADATA exists, not that
+# the processes are up (after a reboot the metadata dir can survive while etcd/
+# apiserver are down). So we require BOTH: metadata present AND a single immediate
+# /healthz check. If metadata exists but is NOT serving, we fall through to the
+# recovery branch below (delete the dead cluster, then recreate).
 if kwokctl get clusters 2>/dev/null | grep -q "^${CLUSTER_NAME}$"; then
-  echo "ℹ️  kwok cluster '${CLUSTER_NAME}' already exists — skipping create"
-else
-  echo "→ Creating kwok binary-runtime cluster '${CLUSTER_NAME}' (kube ${KUBE_VERSION})..."
-  # kwokctl v0.6.0 has NO --kube-version flag; the version is selected via the
-  # KWOK_KUBE_VERSION env var. The binaries are pre-cached in the image at this
-  # exact version, so this create is fully offline.
-  KWOK_KUBE_VERSION="${KUBE_VERSION}" kwokctl create cluster \
-    --name "${CLUSTER_NAME}" \
-    --runtime=binary
-  echo "✓ kwok cluster created"
+  if kubectl config get-contexts -o name 2>/dev/null | grep -q "^${CTX}$" \
+     && kubectl --context "${CTX}" get --raw /healthz 2>/dev/null | grep -q '^ok$'; then
+    kubectl config use-context "${CTX}" >/dev/null 2>&1 || true
+    echo "ℹ️  kwok cluster already running and serving — nothing to do"
+    exit 0
+  fi
 fi
 
+# ── Create the kwokctl binary-runtime cluster ──────────────────────────────────
+if kwokctl get clusters 2>/dev/null | grep -q "^${CLUSTER_NAME}$"; then
+  # Metadata exists but the apiserver is NOT serving (checked above) — the cluster
+  # is dead (e.g. a reboot left stale metadata). Delete it and recreate cleanly;
+  # kwokctl refuses to create over an existing name, so the delete is required.
+  echo "⚠  kwok cluster '${CLUSTER_NAME}' exists but is not serving — recreating"
+  kwokctl delete cluster --name "${CLUSTER_NAME}" 2>/dev/null || true
+fi
+
+echo "→ Creating kwok binary-runtime cluster '${CLUSTER_NAME}' (kube ${KUBE_VERSION})..."
+# kwokctl v0.6.0 has NO --kube-version flag; the version is selected via the
+# KWOK_KUBE_VERSION env var. The binaries are pre-cached in the image at this
+# exact version, so this create is fully offline.
+KWOK_KUBE_VERSION="${KUBE_VERSION}" kwokctl create cluster \
+  --name "${CLUSTER_NAME}" \
+  --runtime=binary
+echo "✓ kwok cluster created"
+
 # ── Select the kubectl context ─────────────────────────────────────────────────
-# kwokctl's binary runtime writes a kubeconfig context named kwok-<name>.
-# Detect it rather than hardcoding so it survives a cluster-name change.
-CTX="kwok-${CLUSTER_NAME}"
+# kwokctl's binary runtime writes a kubeconfig context named kwok-<name> into the
+# DEFAULT kubeconfig (~/.kube/config since no KUBECONFIG/--kubeconfig is set), so
+# the laborant login shell sees it with no manual export. CTX is set at the top.
 if ! kubectl config get-contexts -o name 2>/dev/null | grep -q "^${CTX}$"; then
   echo "ERROR: expected kubeconfig context '${CTX}' not found."
   echo "       Available contexts:"; kubectl config get-contexts -o name || true

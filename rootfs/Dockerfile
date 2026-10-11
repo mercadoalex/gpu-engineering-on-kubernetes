@@ -120,6 +120,18 @@ COPY rootfs/welcome /home/${LAB_USER}/.welcome
 RUN chown ${LAB_USER}:${LAB_USER} /home/${LAB_USER}/.welcome
 RUN echo 'cat ~/.welcome' >> /home/${LAB_USER}/.bashrc
 
+# ── KWOK cluster systemd service ──────────────────────────────────────────────
+# The cluster MUST be owned by a long-lived systemd service (PID 1 parent), NOT by
+# an init task — the iximiuz examiner reaps an init task's process tree on
+# completion, killing anything it spawned. This unit (Type=oneshot +
+# RemainAfterExit=yes + KillMode=process, running as laborant) brings the cluster
+# up on boot and keeps the detached etcd/apiserver/kwok children alive; the init
+# task only WAITS for it. See rootfs/kwok-cluster.service for the full rationale.
+# kwokctl writes the kubeconfig to the DEFAULT /home/laborant/.kube/config, so the
+# laborant login shell sees it with NO KUBECONFIG export — nothing added to .bashrc.
+COPY rootfs/kwok-cluster.service /etc/systemd/system/kwok-cluster.service
+RUN systemctl enable kwok-cluster.service
+
 # ── iximiuz examiner (task engine) ────────────────────────────────────────────
 # The iximiuz platform injects the examiner binary at VM creation time.
 # This stub ensures the service file exists so systemd doesn't error on boot.
