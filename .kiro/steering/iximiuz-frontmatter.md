@@ -18,6 +18,11 @@ inclusion: manual
 | `slug:` in challenge | _(omit it)_ | HTTP 400 — same reason |
 | body content in lesson `index.md` | Put it in `unit-1.md` | Content not rendered — lesson appears blank |
 
+**Course vs lesson index.md body — opposite rules:**
+- **Lesson `index.md`** — NO body after the closing `---`. Content lives in `unit-1.md`.
+- **Course `index.md`** — the body AFTER the frontmatter IS the "About this course" page (## What you'll learn, ## Prerequisites, ## Lab environment, etc.). A course with no body shows a blank About section.
+- **Module `0.index.md`** — frontmatter only, no body.
+
 **The `createdAt` / `updatedAt` trap is the most dangerous** — the platform YAML parser
 silently drops the entire `tasks:` block when dates are quoted strings. Always bare dates.
 
