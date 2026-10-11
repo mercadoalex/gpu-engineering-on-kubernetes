@@ -1,0 +1,32 @@
+IMAGE SPEC — kwok-vs-real-v1.png
+Lesson: Module 1, Lesson 1 — "Your Cluster Has No Idea What a GPU Is (Yet)"
+Section: "Wait — where are these nodes coming from? Meet KWOK"
+
+PURPOSE
+Show that KWOK presents the Kubernetes control plane with the same node/pod API
+objects a real cluster would — without kubelets, container runtimes, or cost.
+
+COMPOSITION
+- Left panel "Real cluster": three physical server racks, each with a "kubelet"
+  badge and a "container runtime" badge, wired to a Kubernetes API server box.
+  Red price tag: "$$$ per hour".
+- Right panel "KWOK cluster": the SAME Kubernetes API server box, wired to three
+  dashed-outline ghost node boxes marked "simulated — no kubelet, no runtime".
+  Green tag: "~2 GB RAM, free". Small KWOK logo top-right.
+- Center label spanning both: "same scheduling surface — the control plane can't
+  tell the difference".
+
+GEMINI PROMPT (append base style fragment from .kiro/steering/visual-style.md)
+A side-by-side comparison technical illustration. Left panel titled "Real cluster"
+shows three physical server racks, each tagged with a small "kubelet" badge and a
+"container runtime" badge, all connected by lines to a central Kubernetes API server
+box; a red price tag in the corner reads "$$$ per hour". Right panel titled "KWOK
+cluster" shows the same Kubernetes API server box connected to three nodes drawn as
+dashed-outline ghost boxes, each labeled "simulated — no kubelet, no runtime"; a green
+tag reads "~2 GB RAM, free" and a small "KWOK" wordmark sits in the top-right. A center
+banner spanning both panels reads "same scheduling surface — the control plane can't
+tell the difference". Style: flat technical illustration, dark navy background
+(#0D1117), electric blue (#2F81F7) and neon green (#39D353) accents, off-white
+(#E6EDF3) labels, subtle hexagonal grid texture at 10% opacity, no photorealism, no
+gradients on solid elements, clean sans-serif labels, developer education platform
+aesthetic. Aspect ratio 16:9.

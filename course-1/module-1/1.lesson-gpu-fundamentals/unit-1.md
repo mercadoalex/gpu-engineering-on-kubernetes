@@ -95,6 +95,56 @@ of this module, but this hands-on exercise only needs kubectl, helm, and a worki
 
 ---
 
+## Wait — where are these nodes coming from? Meet KWOK
+
+You don't have a rack of GPU servers under your desk, and you don't need one.
+The cluster in this lab is built with **KWOK — Kubernetes WithOut Kubelet**.
+
+KWOK is a toolkit that spins up a cluster of thousands of nodes in seconds. Under
+the hood, every node is **simulated** to behave like a real one — it reports Ready,
+accepts pods, updates status, and responds to the scheduler exactly as a physical
+node would. But there's no kubelet, no container runtime, and no actual machine
+behind it. The nodes are pure Kubernetes API objects whose lifecycle KWOK maintains.
+
+That's what makes this course possible on a laptop. A real 3-node GPU cluster would
+cost thousands of dollars an hour. KWOK gives you the same scheduling surface — the
+same `kubectl get nodes`, the same pod placement, the same `Pending` behavior — for
+a resource footprint of roughly 2 GB of RAM and zero dollars.
+
+::image-box
+---
+:src: __static__/kwok-vs-real-v1.png
+:alt: Side-by-side comparison illustration. Left panel labeled "Real cluster" shows three physical server racks, each with a kubelet badge and a container runtime badge, connected to a Kubernetes API server, with a red price tag reading "$$$ per hour". Right panel labeled "KWOK cluster" shows the same Kubernetes API server connected to three nodes drawn as dashed-outline ghost boxes marked "simulated — no kubelet, no runtime", with a green tag reading "~2 GB RAM, free". A center label reads "same scheduling surface — the control plane can't tell the difference". A small KWOK logo sits in the top-right of the right panel.
+:max-width: 860px
+---
+_KWOK presents the Kubernetes control plane with the exact same node and pod API objects a real cluster would — minus the kubelet, the runtime, and the bill._
+::
+
+| | Real cluster | KWOK cluster |
+|---|---|---|
+| Nodes | Physical/virtual machines with a kubelet | Simulated API objects, no kubelet |
+| Pods | Actually run containers | Simulated as Running — no real execution |
+| GPU scheduling | Real device plugin + hardware | Identical scheduling logic, injected GPU capacity |
+| Cost to run 3 nodes | Dollars per hour | Free |
+| Time to create | Minutes (provision + join) | Seconds |
+
+::hint-box
+---
+:summary: If the pods don't really run, what am I actually learning?
+---
+Everything that matters for GPU **operations**. Scheduling, quota, gang scheduling,
+preemption, autoscaling decisions, and observability all happen in the Kubernetes
+control plane — above the layer where real execution would occur. KWOK simulates
+that execution layer so the control plane behaves identically.
+
+What you *won't* do on KWOK is run real GPU code (a CUDA kernel, a vLLM server).
+That's exactly why the course has a Tier 2: Modules 6–8 move to a real GPU on GCP
+to deploy and benchmark actual inference. Everything up to that point — the hard,
+scarce, high-value scheduling and platform skills — you learn here, for free.
+::
+
+---
+
 ## 1. What your cluster actually knows about hardware
 
 Kubernetes discovers node resources in two steps.
