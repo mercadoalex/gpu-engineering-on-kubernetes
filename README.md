@@ -104,6 +104,30 @@ kubectl get nodes -o json | jq '.items[] | {name: .metadata.name, gpu: .status.a
 
 ---
 
+## Lab image
+
+The iximiuz playground boots a custom OCI image (`rootfs/Dockerfile`) built with
+`make build` and pushed with `make push`. It ships `kubectl`, `kwokctl`, `helm`,
+`jq`, and the course repo, and pre-warms the kwokctl binary-runtime cache at build
+time so the cluster comes up fully offline in seconds at playground start.
+
+> **Note on image size:** the image is large (~6 GB) because the pre-cached
+> Kubernetes and etcd binaries dominate it. To slim it, the kube/etcd binaries are
+> the bulk and there are ways to trim them — strip debug symbols and drop unused
+> components. Not required for correctness; iximiuz caches the image after the first
+> pull, so student boot time is unaffected.
+
+Build and publish:
+
+```bash
+make build REGISTRY=ghcr.io/mercadoalex
+make push  REGISTRY=ghcr.io/mercadoalex
+make tag-latest REGISTRY=ghcr.io/mercadoalex
+labctl playground update -f playground/playground.yaml <playground-slug>
+```
+
+---
+
 ## Directory layout
 
 ```
