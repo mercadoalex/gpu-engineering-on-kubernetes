@@ -139,6 +139,32 @@ and works correctly — regular tasks run after the playground is up with no `in
 
 ---
 
+## kwokctl binary-runtime gotchas (learned the hard way)
+
+- **Warm the cache at BUILD time, never at boot.** `kwokctl create cluster --runtime=binary`
+  downloads kube + etcd + kwok binaries from `dl.k8s.io`. Run a throwaway
+  `create`+`delete` in the Dockerfile so the binaries land in `~/.kwok/cache/`.
+  At playground boot the create is then fully offline.
+- **kwokctl v0.6.0 has NO `--kube-version` flag.** Select the version with the
+  `KWOK_KUBE_VERSION` env var: `KWOK_KUBE_VERSION=v1.31.3 kwokctl create cluster --runtime=binary`.
+- **Cache path is URL-mirrored**, not `cache/kubernetes/<ver>`. The real path is
+  `~/.kwok/cache/https/dl.k8s.io/release/<ver>/bin/linux/amd64/kube-apiserver`.
+  Assert that exact path in the Dockerfile to confirm the warm-up worked.
+- **Run the warm-up AS the lab user** (`laborant`), not root — the cache is HOME-relative
+  and the playground runs as the lab user.
+- **"Cluster is started" is optimistic.** kwokctl prints it even if the apiserver
+  isn't serving yet. ALWAYS poll `kubectl get --raw /healthz` until it returns `ok`
+  before applying any objects, or node applies hit "connection refused".
+- **Apply fake nodes with `kubectl apply --validate=false`** — avoids a dependency on
+  the apiserver's openapi endpoint being fully warmed in the first seconds.
+- **Never hardcode `lastHeartbeatTime` on KWOK fake nodes.** With the
+  `kwok.x-k8s.io/node: fake` annotation, the kwok controller owns the Ready condition
+  and heartbeat. A pinned timestamp goes stale and fails the Ready freshness check.
+- **QEMU emulation is NOT representative of boot time.** Building/running the amd64
+  image on an Apple Silicon host under QEMU makes the apiserver take minutes to serve.
+  On native amd64 (the real Firecracker runtime) it's ~10s. Do not quote emulated
+  timings to students, and give the health-check loop generous headroom.
+
 ## Service startup times (reference)
 
 | Service | Port | Time to ready (cold boot, 2 GiB microVM) |
