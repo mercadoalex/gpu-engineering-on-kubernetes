@@ -3,8 +3,8 @@ name: gpu-engineering-on-kubernetes-62a4150c
 base: flexbox
 title: GPU Engineering on Kubernetes
 description: |-
-    Ubuntu 24.04 + kind + KWOK + kubectl + helm + jq pre-installed.
-    Tier 1 local simulation environment — no real GPU required.
+    Ubuntu 24.04 + kwokctl (binary runtime) + kubectl + helm + jq pre-installed.
+    Tier 1 local simulation environment — no real GPU, no kind, no Docker.
     Modules 1–5: GPU fundamentals, scheduling, Kueue, Volcano, observability.
 categories:
     - kubernetes
@@ -20,11 +20,11 @@ playground:
               default: true
           drives:
             - mount: /
-              # TODO: build and push this image before creating the playground.
-              # See rootfs/Dockerfile for build instructions.
-              # Required tools in image: kind, kwokctl, kubectl, helm, jq, yq, curl, git, bash
-              # Required K8s version: 1.31+ (DRA feature gate for ResourceSlices)
-              source: oci://ghcr.io/mercadoalex/gpu-k8s-lab:latest  # built: 35bfe27
+              # Pin to an immutable build tag (NOT :latest) so iximiuz pulls this
+              # exact image and never serves a cached older :latest. Bump this tag
+              # on every rebuild: make build prints the git-sha tag.
+              # Image: kwokctl binary-runtime cache pre-warmed, repo at /workdir.
+              source: oci://ghcr.io/mercadoalex/gpu-k8s-lab:8e5fd3f
           network:
             interfaces:
                 - network: local
