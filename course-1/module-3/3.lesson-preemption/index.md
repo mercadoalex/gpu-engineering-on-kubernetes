@@ -14,7 +14,6 @@ tagz:
   - preemption
   - priority-class
   - gpu-scheduling
-  - kubernetes
 playground:
   name: gpu-engineering-on-kubernetes-62a4150c
 tasks:

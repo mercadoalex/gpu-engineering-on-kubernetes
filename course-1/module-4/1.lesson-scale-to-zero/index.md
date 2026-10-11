@@ -14,7 +14,6 @@ tagz:
   - cluster-autoscaler
   - scale-to-zero
   - finops
-  - kubernetes
 playground:
   name: gpu-engineering-on-kubernetes-62a4150c
 tasks:

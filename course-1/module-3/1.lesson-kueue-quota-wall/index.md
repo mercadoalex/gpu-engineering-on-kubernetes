@@ -14,7 +14,6 @@ tagz:
   - gpu-scheduling
   - clusterqueue
   - quota
-  - kubernetes
 playground:
   name: gpu-engineering-on-kubernetes-62a4150c
 tasks:

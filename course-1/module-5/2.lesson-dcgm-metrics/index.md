@@ -14,7 +14,6 @@ tagz:
   - dcgm
   - grafana
   - gpu-metrics
-  - observability
   - prometheus
 playground:
   name: gpu-engineering-on-kubernetes-62a4150c

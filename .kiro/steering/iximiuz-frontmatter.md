@@ -11,6 +11,8 @@ inclusion: manual
 | Wrong | Right | Effect of using wrong |
 |-------|-------|----------------------|
 | `tags:` | `tagz:` | Tags silently ignored — no error |
+| category word in `tagz:` (e.g. `kubernetes`, `observability`) | put it in `categories:` only | HTTP 400 — "tags must not include known categories" |
+| `SYLLABUS.md` / stray `.md` in the pushed dir | keep planning docs OUTSIDE the `-d` dir | HTTP 400 — "Content kind course does not support files with kind undefined" |
 | `"2026-09-03"` (quoted) | `2026-09-03` (bare date) | Tasks block **silently ignored entirely** — content appears but no tasks run |
 | `name:` in challenge | _(omit it)_ | HTTP 400 — platform assigns slug at creation |
 | `slug:` in challenge | _(omit it)_ | HTTP 400 — same reason |

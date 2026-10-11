@@ -14,7 +14,6 @@ tagz:
   - l4
   - inference
   - openai-api
-  - kubernetes
 playground:
   name: gpu-engineering-on-kubernetes-62a4150c
 tasks:

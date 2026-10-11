@@ -14,7 +14,6 @@ tagz:
   - a100
   - nvidia
   - gpu-operator
-  - kubernetes
 playground:
   name: gpu-engineering-on-kubernetes-62a4150c
 # challenges:   (commented out — no slug yet; FINAL LESSON ONLY)
