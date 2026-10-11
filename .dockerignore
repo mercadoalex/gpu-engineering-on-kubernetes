@@ -1,0 +1,33 @@
+# Keep the lab image lean. COPY . /opt/gpu-k8s-lab only needs the course content
+# and scripts — NOT the 5.7 GB docs/ reference tree, git history, or build junk.
+# Docker does NOT read .gitignore; this file is what controls the build context.
+
+# ColdFusion reference material (5.7 GB — never belongs in the image)
+docs/
+
+# Git internals and worktrees
+.git/
+.worktrees/
+
+# Agent/workflow artifacts
+.agents/
+
+# Planning + legacy docs not needed at runtime
+SYLLABUS.md
+gpu-k8s-lab.md
+README_colldfusion.md
+INIT_TASKS_PLAYBOOK.md
+kubernetes_gpu_training.png
+
+# OS / editor cruft
+.DS_Store
+**/.DS_Store
+
+# Downloads and local binaries
+downloads/
+*.zip
+*.deb
+*.tar.gz
+
+# The image spec placeholders (lessons reference the generated PNGs, not .todo)
+**/*.png.todo
