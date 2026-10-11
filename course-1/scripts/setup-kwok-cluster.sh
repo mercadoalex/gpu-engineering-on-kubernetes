@@ -30,10 +30,12 @@ if kwokctl get clusters 2>/dev/null | grep -q "^${CLUSTER_NAME}$"; then
   echo "ℹ️  kwok cluster '${CLUSTER_NAME}' already exists — skipping create"
 else
   echo "→ Creating kwok binary-runtime cluster '${CLUSTER_NAME}' (kube ${KUBE_VERSION})..."
-  kwokctl create cluster \
+  # kwokctl v0.6.0 has NO --kube-version flag; the version is selected via the
+  # KWOK_KUBE_VERSION env var. The binaries are pre-cached in the image at this
+  # exact version, so this create is fully offline.
+  KWOK_KUBE_VERSION="${KUBE_VERSION}" kwokctl create cluster \
     --name "${CLUSTER_NAME}" \
-    --runtime=binary \
-    --kube-version="${KUBE_VERSION}"
+    --runtime=binary
   echo "✓ kwok cluster created"
 fi
 
@@ -49,6 +51,21 @@ fi
 kubectl config use-context "${CTX}"
 echo "✓ Using context '${CTX}'"
 
+# ── Wait for the apiserver to actually SERVE ───────────────────────────────────
+# kwokctl's "Cluster is started" message is optimistic — under slower hosts the
+# kube-apiserver may still be warming up. Poll /healthz before touching the API,
+# otherwise the node apply below hits "connection refused". On native amd64 this
+# is ready in seconds; the generous loop covers slow/first-boot cases.
+echo "→ Waiting for the apiserver to serve..."
+for i in $(seq 1 60); do
+  if kubectl get --raw /healthz 2>/dev/null | grep -q '^ok$'; then
+    echo "✓ apiserver healthy"
+    break
+  fi
+  [ "$i" -eq 60 ] && { echo "ERROR: apiserver did not become healthy in 300s"; exit 1; }
+  sleep 5
+done
+
 # ── Create virtual GPU worker nodes ───────────────────────────────────────────
 # These are KWOK-managed nodes — no real VMs. The kwok controller (bundled in the
 # binary runtime) owns the heartbeat and the Ready condition for any node carrying
@@ -63,7 +80,10 @@ for i in 1 2 3; do
     echo "   ℹ️  Node ${NODE_NAME} already exists — skipping"
     continue
   fi
-  kubectl apply -f - <<EOF
+  # --validate=false: skip the openapi schema download. The fake Node spec is
+  # trivially valid, and skipping avoids a dependency on the apiserver's openapi
+  # endpoint being fully warmed during the first seconds after startup.
+  kubectl apply --validate=false -f - <<EOF
 apiVersion: v1
 kind: Node
 metadata:

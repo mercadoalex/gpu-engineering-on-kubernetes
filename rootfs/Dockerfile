@@ -16,12 +16,14 @@ ARG KUBECTL_VERSION=v1.31.3
 ARG KWOKCTL_VERSION=v0.6.0
 ARG HELM_VERSION=v3.16.3
 # Kubernetes version warmed into the kwokctl binary-runtime cache. Must match
-# the --kube-version the setup script requests at runtime (course-1/scripts).
+# the KWOK_KUBE_VERSION the setup script exports at runtime (course-1/scripts).
+# kwokctl v0.6.0 has NO --kube-version flag; the version is selected via the
+# KWOK_KUBE_VERSION environment variable, which templates the dl.k8s.io URLs.
 ARG KUBE_VERSION=v1.31.3
-# etcd image tag that kwok v0.6.0 downloads for K8s v1.31.x (the default etcd
-# tag pinned by the Kubernetes 1.31 release). Confirm from the warm-up download
-# log during the build and keep this in sync if it ever changes.
-ARG ETCD_VERSION=3.5.15-0
+# etcd version that kwokctl v0.6.0 downloads for the binary runtime (hardcoded
+# default in kwok v0.6.0: etcd-io/etcd/releases/download/v3.5.11). This ARG is
+# informational — the binary runtime pulls v3.5.11 regardless; kept for docs.
+ARG ETCD_VERSION=v3.5.11
 
 # ── Disable interactive prompts ──────────────────────────────────────────────
 ENV DEBIAN_FRONTEND=noninteractive
@@ -95,16 +97,19 @@ RUN ln -s /opt/gpu-k8s-lab /workdir
 
 # ── Warm the kwokctl binary-runtime cache AT BUILD TIME ──────────────────────
 # Cache-location decision: kwokctl's binary runtime caches downloaded binaries
-# under ~/.kwok/cache/kubernetes/<KUBE_VERSION>/... — i.e. home-dir relative.
-# The playground runs as `laborant`, so we run the warm-up AS laborant (not root)
-# so the cache lands in /home/laborant/.kwok where the runtime looks. The create
-# forces kwokctl to download kube-apiserver, kube-controller-manager,
-# kube-scheduler, etcd (${ETCD_VERSION}) and kwok; the delete removes the
-# ephemeral cluster but the cache persists. Result: boot is fully offline.
-RUN su -s /bin/bash ${LAB_USER} -c '\
-      kwokctl create cluster --name warmup --runtime=binary --kube-version=${KUBE_VERSION} && \
-      kwokctl delete cluster --name warmup' && \
-    ls -d /home/${LAB_USER}/.kwok/cache/kubernetes/${KUBE_VERSION}
+# under ~/.kwok/cache/https/<mirrored-url>/... — i.e. home-dir relative, with the
+# download URL mirrored into the path. The playground runs as `laborant`, so we
+# run the warm-up AS laborant (not root) so the cache lands in /home/laborant/.kwok
+# where the runtime looks. kwokctl v0.6.0 selects the kube version via the
+# KWOK_KUBE_VERSION env var (NOT a --kube-version flag). The create forces a
+# download of kube-apiserver/controller-manager/scheduler, etcd (v3.5.11) and
+# kwok; the delete removes the ephemeral cluster but the cache persists. Result:
+# boot is fully offline. The assertion checks the real cached kube-apiserver path.
+RUN su -s /bin/bash ${LAB_USER} -c "\
+      export KWOK_KUBE_VERSION=${KUBE_VERSION} && \
+      kwokctl create cluster --name warmup --runtime=binary && \
+      kwokctl delete cluster --name warmup" && \
+    test -f /home/${LAB_USER}/.kwok/cache/https/dl.k8s.io/release/${KUBE_VERSION}/bin/linux/amd64/kube-apiserver
 
 # ── machine-id reset (required — each VM must have a unique machine-id) ───────
 RUN rm -f /etc/machine-id /var/lib/dbus/machine-id && \
