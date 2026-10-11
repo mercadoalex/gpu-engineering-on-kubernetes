@@ -109,6 +109,15 @@ of a custom resource are available. The kubelet patches `node.status.capacity`
 with that count. The scheduler then sees it as an allocatable resource — and it
 knows nothing about what that resource actually is.
 
+::image-box
+---
+:src: __static__/device-plugin-arch-v1.png
+:alt: Architecture diagram of the Kubernetes device plugin mechanism. On a node, a device plugin DaemonSet pod registers with the kubelet over a gRPC socket at /var/lib/kubelet/device-plugins/. An arrow labeled "ListAndWatch gRPC" flows from the device plugin to the kubelet. The kubelet then sends a "PATCH node.status.capacity" arrow up to the Kubernetes API server, adding "nvidia.com/gpu: 4" to the node's allocatable resources. On the right, the kube-scheduler reads the node status and is shown placing a GPU-requesting pod onto the node, with a thought-bubble label "I see 4 units of nvidia.com/gpu — I don't know or care what they are".
+:max-width: 860px
+---
+_The device plugin tells the kubelet how many units exist over a gRPC socket. The kubelet patches the node's capacity. The scheduler just sees a number — it never learns what the resource actually is._
+::
+
 **Extended resources** are the mechanism. Any string in the form `vendor.com/resource`
 is a valid extended resource. `nvidia.com/gpu` is just a well-known string the
 NVIDIA device plugin registers. Kubernetes could just as easily track `acme.com/widget`.
