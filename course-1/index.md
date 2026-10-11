@@ -23,7 +23,9 @@ Every chatbot you've talked to, every image a model has generated, every recomme
 
 And here's the gap: the world has a flood of people who can call an AI API, and a shortage of people who can **run the infrastructure underneath it**. When a company brings AI in-house — for cost, privacy, or control — someone has to make the GPUs actually work on Kubernetes: schedule them, share them across teams, keep them healthy, and stop them from quietly burning the budget. That someone is a GPU infrastructure engineer. There aren't many of them. They're paid like it.
 
-This course makes you one of them.
+This is a wide-open opportunity for **DevOps, SRE, and platform engineers**. You already know Kubernetes — the hard part most people never learn. GPU operations is the layer on top: a specialized, high-demand skill set that very few engineers have today, on infrastructure that every AI-driven company is racing to build. The gap between "I run Kubernetes" and "I run GPU clusters for AI" is exactly the gap this course closes — and it's where the next decade of platform careers is being written.
+
+This course makes you one of the engineers on the right side of that gap.
 
 ## What this course is
 
