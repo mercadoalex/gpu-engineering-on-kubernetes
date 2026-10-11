@@ -19,6 +19,30 @@ A GPU is the opposite shape. Instead of a handful of clever cores, it has **thou
 _A CPU has a few powerful cores for complex sequential work. A GPU has thousands of simple cores that do the same operation across massive data in parallel — exactly the shape of neural network math._
 ::
 
+::hint-box
+---
+:summary: Wait — how much is "a core"? Is a GPU core the same as a CPU core?
+---
+No, and it's an important distinction. They share a name but they are not the same unit.
+
+A **CPU core** is a full-featured, independent processor. It has its own control
+logic, can run a completely different program from the core next to it, handles
+branching (`if/else`), and manages its own cache. A modern server CPU has roughly
+**8 to 128** of these. Each is genuinely powerful on its own.
+
+A **GPU "core"** (NVIDIA calls them **CUDA cores**) is far simpler. It is not an
+independent processor — it's one lane in a much larger execution unit. Thousands of
+them run in lockstep, executing the **same instruction** on different pieces of data
+at the same time. One CUDA core on its own is weak; the power is in having thousands
+act together. A single NVIDIA L4 has **7,424** CUDA cores; an A100 has **6,912** plus
+specialized **tensor cores** built just for matrix math.
+
+So "a few vs thousands" isn't an apples-to-apples core count — it's two different
+designs. The CPU optimizes for *doing different things quickly*. The GPU optimizes
+for *doing the same thing to a lot of data at once*. For a neural network, which is
+the same arithmetic repeated billions of times, the GPU's design wins by a wide margin.
+::
+
 Here's why that matters for AI. A neural network is, under the hood, a staggering number of multiply-and-add operations on matrices — the same arithmetic, repeated billions of times. On a CPU's few cores that's a slow march. On a GPU's thousands of cores it's done in parallel, often **10–100× faster**. Training a modern model on CPUs would take months or years; on GPUs it takes days. Inference — actually answering your prompt — is the same story: the GPU is what makes the response feel instant instead of taking a minute per sentence.
 
 | | CPU | GPU |
