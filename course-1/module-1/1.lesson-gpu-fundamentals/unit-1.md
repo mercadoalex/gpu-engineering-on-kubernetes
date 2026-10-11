@@ -4,6 +4,32 @@ title: Your Cluster Has No Idea What a GPU Is (Yet)
 name: lesson-gpu-fundamentals-unit-1
 ---
 
+## First, why a GPU at all?
+
+A CPU is a small team of very fast, very clever workers. Four, eight, maybe 64 cores — each one powerful, each one able to handle complex, branching logic on its own. Give a CPU a to-do list with lots of different decisions and it flies through it. That's what runs your operating system, your web server, your database.
+
+A GPU is the opposite shape. Instead of a handful of clever cores, it has **thousands** of simpler ones. No single one is impressive, but together they do the same operation across a mountain of data at the same time. That's called massively parallel computation.
+
+Here's why that matters for AI. A neural network is, under the hood, a staggering number of multiply-and-add operations on matrices — the same arithmetic, repeated billions of times. On a CPU's few cores that's a slow march. On a GPU's thousands of cores it's done in parallel, often **10–100× faster**. Training a modern model on CPUs would take months or years; on GPUs it takes days. Inference — actually answering your prompt — is the same story: the GPU is what makes the response feel instant instead of taking a minute per sentence.
+
+| | CPU | GPU |
+|---|---|---|
+| Cores | A few, very powerful | Thousands, simpler |
+| Best at | Complex, branching logic — one thing at a time, fast | The same simple operation across huge data, all at once |
+| Runs | OS, web servers, databases | Training & inference for AI/ML, graphics, simulation |
+| The AI job | Slow — a few workers doing billions of ops in sequence | Fast — thousands of workers doing them in parallel |
+
+So when a company runs AI, it runs on GPUs. And when that AI runs at scale, it runs on GPUs **orchestrated by Kubernetes** — which is where you come in. But before you can schedule a GPU, you have to understand how Kubernetes sees one. The answer is going to surprise you.
+
+::hint-box
+---
+:summary: Do I need to understand GPU hardware to be good at this?
+---
+Not deeply. You need the mental model above — parallel vs sequential, why AI maps onto parallel — and that's about it for this course. Your job isn't to design GPUs or write CUDA kernels. Your job is to make Kubernetes schedule, share, and observe them correctly. That's an operations skill, and it's the one that's in short supply.
+::
+
+---
+
 ## kubectl get nodes shows 8 GPUs. Your cluster has absolutely no idea what a GPU is.
 
 That number — `nvidia.com/gpu: 8` — is just an integer Kubernetes is tracking.
