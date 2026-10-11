@@ -99,6 +99,21 @@ produces something verifiable. Target 3–5 tasks per lesson.
 
 ### 4. Image boxes
 
+> **Images carry the concepts. People scan images before they read prose.**
+> Treat diagrams as a primary teaching tool, not decoration. A lesson that
+> explains a concept in words alone is an unfinished lesson.
+
+**Image-density target: one `::image-box` per major concept section, minimum.**
+A typical lesson has 4–6 content sections → aim for **4–6 diagrams per lesson**,
+plus the opening hook image. Any time you introduce:
+- an architecture or data flow → draw it
+- a before/after state change → show both states side by side
+- a comparison (A vs B) → two-panel diagram
+- a sequence of steps → numbered flow diagram
+- a resource model or hierarchy → boxes-and-arrows diagram
+
+If you're writing more than ~3 paragraphs with no image, stop and add one.
+
 ```markdown
 ::image-box
 ---
@@ -112,6 +127,13 @@ _Caption: what the diagram shows + why it matters in one sentence._
 
 **Naming:** `<concept>-<descriptor>-v<N>.png` — use `v1`, `v2` when replacing;
 never overwrite. Images appear **before** the code block they illustrate.
+
+**Every image needs a `.todo` spec file** when the PNG doesn't exist yet. The
+`.todo` file (named `<image>.png.todo`) must contain: purpose, composition
+breakdown, and a ready-to-paste Gemini prompt that ends with the base style
+fragment from `visual-style.md`. This lets images be generated in a batch later
+without re-deriving what each one should show. See `visual-style.md` for the
+color system and prompt structure — all images across all courses must match it.
 
 When an image doesn't exist yet, create a `.todo` placeholder:
 ```

@@ -1,0 +1,28 @@
+IMAGE SPEC — cpu-vs-gpu-v1.png
+Lesson: Module 1, Lesson 1 — "Your Cluster Has No Idea What a GPU Is (Yet)"
+Section: "First, why a GPU at all?"
+
+PURPOSE
+Visually contrast CPU (few powerful cores, sequential) vs GPU (thousands of simple
+cores, parallel) and show why the GPU finishes an AI workload far sooner.
+
+COMPOSITION
+- Left panel labeled "CPU": 8 large glowing electric-blue cores in a grid, each with
+  a small gear icon (complex logic). Caption: "a few powerful cores — fast at one task at a time".
+- Right panel labeled "GPU": dense grid of ~200 small neon-green cores all lit at once.
+  Caption: "thousands of simple cores — same operation across huge data, all at once".
+- Shared timeline bar at the bottom: CPU = long thin bar (sequential), GPU = short wide
+  bar (parallel). Label: "same AI workload: GPU finishes 10–100x sooner".
+
+GEMINI PROMPT (append base style fragment from .kiro/steering/visual-style.md)
+A side-by-side technical comparison illustration. Left panel labeled "CPU" shows 8 large
+glowing electric-blue processor cores in a 2x4 grid, each marked with a small gear icon to
+suggest complex logic, captioned "a few powerful cores — fast at one task at a time". Right
+panel labeled "GPU" shows a dense grid of roughly 200 small neon-green cores all lit
+simultaneously, captioned "thousands of simple cores — same operation across huge data, all
+at once". Below both panels a shared horizontal timeline shows the CPU as a long thin bar
+(sequential processing) and the GPU as a short wide bar (parallel processing), labeled "same
+AI workload: GPU finishes 10–100x sooner". Style: flat technical illustration, dark navy
+background (#0D1117), electric blue (#2F81F7) and neon green (#39D353) accents, off-white
+(#E6EDF3) labels, subtle hexagonal grid texture at 10% opacity, no photorealism, no gradients
+on solid elements, clean sans-serif labels, developer education platform aesthetic. Aspect ratio 16:9.

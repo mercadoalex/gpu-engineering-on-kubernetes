@@ -10,6 +10,15 @@ A CPU is a small team of very fast, very clever workers. Four, eight, maybe 64 c
 
 A GPU is the opposite shape. Instead of a handful of clever cores, it has **thousands** of simpler ones. No single one is impressive, but together they do the same operation across a mountain of data at the same time. That's called massively parallel computation.
 
+::image-box
+---
+:src: __static__/cpu-vs-gpu-v1.png
+:alt: Side-by-side comparison illustration. Left panel labeled "CPU" shows 8 large glowing blue cores arranged in a grid, each with a gear icon suggesting complex logic, with the caption "a few powerful cores — fast at one task at a time". Right panel labeled "GPU" shows a dense grid of hundreds of small green cores all lit up simultaneously, with the caption "thousands of simple cores — the same operation across huge data, all at once". Below both panels, a shared timeline bar shows the CPU processing matrix operations sequentially (a long thin bar) versus the GPU processing them in parallel (a short wide bar), with the label "same AI workload: GPU finishes 10–100x sooner".
+:max-width: 860px
+---
+_A CPU has a few powerful cores for complex sequential work. A GPU has thousands of simple cores that do the same operation across massive data in parallel — exactly the shape of neural network math._
+::
+
 Here's why that matters for AI. A neural network is, under the hood, a staggering number of multiply-and-add operations on matrices — the same arithmetic, repeated billions of times. On a CPU's few cores that's a slow march. On a GPU's thousands of cores it's done in parallel, often **10–100× faster**. Training a modern model on CPUs would take months or years; on GPUs it takes days. Inference — actually answering your prompt — is the same story: the GPU is what makes the response feel instant instead of taking a minute per sentence.
 
 | | CPU | GPU |
