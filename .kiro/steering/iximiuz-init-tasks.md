@@ -7,6 +7,59 @@ inclusion: manual
 > If the playground is stuck at "Warming up playground… Init tasks completed: 0/N",
 > an init task script has either timed out or is polling something that boots too slowly.
 
+## ⚠️ THE #1 RULE — WHERE INIT TASKS LIVE (read this first)
+
+**Init tasks go in the PLAYGROUND manifest under a top-level `initTasks:` key —
+NOT in a lesson's `index.md` `tasks:` block.** This is the single most important
+fact about init tasks, and getting it wrong cost this project ~2 days on the GPU
+course (Oct 2026): an `init: true` task placed in a lesson's `tasks:` block makes
+the "Warming up playground… Init tasks completed: 0/N" spinner hang **forever**.
+
+**Two different task locations, two different purposes:**
+
+| Location | Key | Purpose | `init: true`? | `timeout_seconds`? |
+|----------|-----|---------|---------------|--------------------|
+| **Playground manifest** (`playground.yaml` / `manifest.yaml`) | `initTasks:` | Provision the environment before the student arrives (kubeconfig, install prereqs, wait for services). Blocks the "Warming up" screen until all exit 0. | **Yes** | **Yes — valid and honored here** (e.g. 180/300/600) |
+| **Lesson** (`index.md`) | `tasks:` | Grade the student's work. The green/red boxes. Run AFTER the playground is up. | **Never** | **No** |
+
+So `timeout_seconds` IS a real, supported field — but ONLY inside the playground's
+`initTasks:`. It is NOT valid on lesson grading tasks. Putting `init: true` or
+`timeout_seconds` on a lesson task is the classic hang.
+
+**Lessons reference the playground by name** (`playground.name: <suffixed-slug>`);
+they do not define init tasks. The playground is built/updated ONCE with
+`labctl playground update <slug> -f manifest.yaml`; lessons are pushed separately
+with `labctl content push`. Init-task changes require re-running the playground
+update and restarting the playground, NOT a content push.
+
+Canonical working shape (from a validated Rancher/K3s course —
+see `rancher_ex/playgrounds/*/manifest.yaml`):
+```yaml
+# In the PLAYGROUND manifest, as a sibling of machines: and tabs:
+playground:
+  machines: [ ... ]
+  tabs: [ ... ]
+  initTasks:
+    init_setup:
+      init: true
+      machine: dev-machine
+      user: laborant
+      timeout_seconds: 180         # valid HERE (playground initTasks only)
+      needs: [ other_init_task ]   # init tasks can chain with needs:
+      run: |
+        # wait for a dependency, set up ~/.kube/config, export KUBECONFIG so
+        # every later shell (and the examiner) finds the cluster
+        export KUBECONFIG="$HOME/.kube/config"
+        grep -q 'KUBECONFIG=' "$HOME/.bashrc" || \
+          echo 'export KUBECONFIG=$HOME/.kube/config' >> "$HOME/.bashrc"
+        kubectl get nodes
+```
+
+**Debugging checklist when the spinner hangs at 0/N:**
+1. Is there an `init: true` task in a lesson `index.md`? → That's the bug. Move it to the playground manifest `initTasks:`.
+2. Did you re-run `labctl playground update` after changing `initTasks:`? A content push does NOT update init tasks.
+3. Did you restart the playground (fresh instance)? A running VM keeps the old init tasks.
+
 ---
 
 ## How the platform boots a playground

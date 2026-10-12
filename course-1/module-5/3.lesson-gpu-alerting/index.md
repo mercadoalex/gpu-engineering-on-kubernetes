@@ -22,7 +22,6 @@ tasks:
     init: true
     machine: dev-machine
     user: laborant
-    timeout_seconds: 300
     run: |
       export KUBECONFIG=/home/laborant/.kube/config
       # NO `set -e` here on purpose. The Ready-count uses `grep -c`, which exits 1
