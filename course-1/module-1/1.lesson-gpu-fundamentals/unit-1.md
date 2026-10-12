@@ -223,6 +223,15 @@ kubectl get nodes -o json | jq '.items[] | {name: .metadata.name, allocatable: .
 You'll see `cpu`, `memory`, `pods`, `ephemeral-storage` — and no `nvidia.com/gpu`.
 That's expected. No device plugin has registered GPU resources yet.
 
+::image-box
+---
+:src: __static__/kubernetes-nodes-resources-v1.png
+:alt: Illustration of a Kubernetes node's status.allocatable resource map. A node box lists its standard advertised resources as rows — cpu, memory, pods, ephemeral-storage — each with a value and a small icon. A greyed-out, dashed row at the bottom labeled nvidia.com/gpu shows a question mark and the note "not present — no device plugin has registered it". The scheduler is shown on the side reading only the four solid rows.
+:max-width: 860px
+---
+_A fresh node advertises only its built-in resources. `nvidia.com/gpu` is absent — nothing has registered it yet. That's the GPU-shaped hole you're about to fill._
+::
+
 ::hint-box
 ---
 :summary: What is .status.allocatable vs .status.capacity?
