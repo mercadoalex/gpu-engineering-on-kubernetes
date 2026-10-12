@@ -42,16 +42,9 @@ playground:
           kind: ide
           name: IDE
           machine: dev-machine
-        - id: http-grafana
-          kind: http-port
-          name: Grafana
-          machine: dev-machine
-          number: 3000
-        - id: http-prometheus
-          kind: http-port
-          name: Prometheus
-          machine: dev-machine
-          number: 9090
+        # Grafana (:3000) and Prometheus (:9090) tabs are added in Module 5
+        # (GPU Observability). They are omitted here so Modules 1-4 don't show
+        # dead tabs with connection errors before those services exist.
     accessControl:
         canList:
             - owner
