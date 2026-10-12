@@ -90,7 +90,15 @@ without a command to run.
 | 7.1 | **Deploy vLLM on a Single L4 GPU** | Deployment + Service, load a small model, hit the OpenAI-compatible `/v1` endpoint | 4 |
 | 7.2 | **Benchmark It: tokens/s, TTFT, TPOT** | Run a load test, capture the three latency metrics, interpret them | 4 |
 | 7.3 | **PagedAttention and Continuous Batching: Why vLLM Is Fast** | Toggle batching config, measure throughput delta, correlate with GPU util in Grafana | 3 |
-| 7.4 | **vLLM vs SGLang: A Head-to-Head on the Same GPU** | Deploy SGLang, run the same benchmark, build a comparison table | 3 |
+| 7.4 | **vLLM vs SGLang vs NVIDIA NIM: Pick Your Serving Stack** | Deploy SGLang, run the same benchmark, build a comparison table; add NVIDIA NIM as the managed/enterprise option — show the OpenAI-compatible API parity, discuss the tradeoff (turnkey + supported + TensorRT-LLM-optimized vs. opaque, NGC-licensed, heavier). vLLM stays the primary hands-on engine; NIM is a comparison aside, not a replacement. | 3 |
+
+> **NVIDIA NIM note:** NIM = prebuilt NVIDIA inference microservice containers
+> (OpenAI-compatible API over TensorRT-LLM/vLLM). It fits as an *alternative serving
+> backend* across all three courses: in C1 Module 7 as a comparison point; in C2 as a
+> drop-in `base_url` swap behind `ChatOpenAI`; in C3 for multi-GPU serving. We keep
+> vLLM primary because the course thesis is "understand the layer underneath" — NIM
+> hides it. NIM also needs NGC auth + licensing, which complicates the < $10/student
+> guardrail. Teach it as "the enterprise turnkey option," not the default.
 
 ---
 
