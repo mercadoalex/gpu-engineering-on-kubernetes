@@ -113,7 +113,7 @@ a resource footprint of roughly 2 GB of RAM and zero dollars.
 
 ::image-box
 ---
-:src: __static__/kwok-vs-real-v1.png
+:src: __static__/real-cluster-kwok-v1.png
 :alt: Side-by-side comparison illustration. Left panel labeled "Real cluster" shows three physical server racks, each with a kubelet badge and a container runtime badge, connected to a Kubernetes API server, with a red price tag reading "$$$ per hour". Right panel labeled "KWOK cluster" shows the same Kubernetes API server connected to three nodes drawn as dashed-outline ghost boxes marked "simulated — no kubelet, no runtime", with a green tag reading "~2 GB RAM, free". A center label reads "same scheduling surface — the control plane can't tell the difference". A small KWOK logo sits in the top-right of the right panel.
 :max-width: 860px
 ---
