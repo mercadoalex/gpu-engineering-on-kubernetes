@@ -23,6 +23,7 @@ tasks:
     user: laborant
     timeout_seconds: 300
     run: |
+      export KUBECONFIG=/home/laborant/.kube/config
       # NO `set -e` here on purpose. The Ready-count uses `grep -c`, which exits 1
       # when the count is 0 (normal on cold boot before nodes register). Under
       # `set -e` that non-zero exit would abort the whole init task on the first
@@ -49,24 +50,28 @@ tasks:
     machine: dev-machine
     user: laborant
     run: |
+      export KUBECONFIG=/home/laborant/.kube/config
       echo "TODO: implement check for create_priority_classes"
       exit 1
   configure_preemption_policy:
     machine: dev-machine
     user: laborant
     run: |
+      export KUBECONFIG=/home/laborant/.kube/config
       echo "TODO: implement check for configure_preemption_policy"
       exit 1
   submit_competing_jobs:
     machine: dev-machine
     user: laborant
     run: |
+      export KUBECONFIG=/home/laborant/.kube/config
       echo "TODO: implement check for submit_competing_jobs"
       exit 1
   observe_eviction:
     machine: dev-machine
     user: laborant
     run: |
+      export KUBECONFIG=/home/laborant/.kube/config
       echo "TODO: implement check for observe_eviction"
       exit 1
   verify_lesson_complete:
@@ -78,5 +83,6 @@ tasks:
       - submit_competing_jobs
       - observe_eviction
     run: |
+      export KUBECONFIG=/home/laborant/.kube/config
       echo "Lesson complete ✓"
 ---

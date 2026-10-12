@@ -23,6 +23,7 @@ tasks:
     user: laborant
     timeout_seconds: 300
     run: |
+      export KUBECONFIG=/home/laborant/.kube/config
       # NO `set -e` here on purpose. The Ready-count uses `grep -c`, which exits 1
       # when the count is 0 (normal on cold boot before nodes register). Under
       # `set -e` that non-zero exit would abort the whole init task on the first
@@ -49,18 +50,21 @@ tasks:
     machine: dev-machine
     user: laborant
     run: |
+      export KUBECONFIG=/home/laborant/.kube/config
       echo "TODO: implement check for inspect_nvidia_smi_sample"
       exit 1
   map_gpu_to_extended_resource:
     machine: dev-machine
     user: laborant
     run: |
+      export KUBECONFIG=/home/laborant/.kube/config
       echo "TODO: implement check for map_gpu_to_extended_resource"
       exit 1
   inspect_node_resource_model:
     machine: dev-machine
     user: laborant
     run: |
+      export KUBECONFIG=/home/laborant/.kube/config
       echo "TODO: implement check for inspect_node_resource_model"
       exit 1
   verify_lesson_complete:
@@ -71,5 +75,6 @@ tasks:
       - map_gpu_to_extended_resource
       - inspect_node_resource_model
     run: |
+      export KUBECONFIG=/home/laborant/.kube/config
       echo "Lesson complete ✓"
 ---

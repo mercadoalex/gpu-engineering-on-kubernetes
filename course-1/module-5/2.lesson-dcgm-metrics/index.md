@@ -24,6 +24,7 @@ tasks:
     user: laborant
     timeout_seconds: 300
     run: |
+      export KUBECONFIG=/home/laborant/.kube/config
       # NO `set -e` here on purpose. The Ready-count uses `grep -c`, which exits 1
       # when the count is 0 (normal on cold boot before nodes register). Under
       # `set -e` that non-zero exit would abort the whole init task on the first
@@ -50,24 +51,28 @@ tasks:
     machine: dev-machine
     user: laborant
     run: |
+      export KUBECONFIG=/home/laborant/.kube/config
       echo "TODO: implement check for build_util_vram_panels"
       exit 1
   build_temp_power_panels:
     machine: dev-machine
     user: laborant
     run: |
+      export KUBECONFIG=/home/laborant/.kube/config
       echo "TODO: implement check for build_temp_power_panels"
       exit 1
   build_xid_panel:
     machine: dev-machine
     user: laborant
     run: |
+      export KUBECONFIG=/home/laborant/.kube/config
       echo "TODO: implement check for build_xid_panel"
       exit 1
   interpret_metrics:
     machine: dev-machine
     user: laborant
     run: |
+      export KUBECONFIG=/home/laborant/.kube/config
       echo "TODO: implement check for interpret_metrics"
       exit 1
   verify_lesson_complete:
@@ -79,5 +84,6 @@ tasks:
       - build_xid_panel
       - interpret_metrics
     run: |
+      export KUBECONFIG=/home/laborant/.kube/config
       echo "Lesson complete ✓"
 ---

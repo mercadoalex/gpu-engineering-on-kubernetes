@@ -92,6 +92,24 @@ for i in $(seq 1 60); do
   sleep 5
 done
 
+# ── Persist KUBECONFIG for the iximiuz examiner (safety net) ───────────────────
+# The iximiuz examiner runs grading task checks in a minimal environment (often
+# root with HOME unset) where kubectl's default ~/.kube/config is empty, so it
+# falls back to localhost:8080, gets "connection refused", and every task fails —
+# leaving the playground spinner stuck at "Init tasks 0/1". The PRIMARY fix is a
+# per-task `export KUBECONFIG=/home/laborant/.kube/config` embedded in each Tier 1
+# lesson's task run blocks. This writes the same value to /etc/environment as a
+# secondary safety net so login shells inherit it too. Idempotent: only append if
+# the line is not already present.
+KUBECONFIG_LINE="KUBECONFIG=/home/laborant/.kube/config"
+if ! grep -qxF "${KUBECONFIG_LINE}" /etc/environment 2>/dev/null; then
+  echo "${KUBECONFIG_LINE}" | sudo tee -a /etc/environment >/dev/null
+  echo "✓ Persisted ${KUBECONFIG_LINE} to /etc/environment"
+else
+  echo "ℹ️  ${KUBECONFIG_LINE} already in /etc/environment — skipping"
+fi
+export KUBECONFIG=/home/laborant/.kube/config
+
 # ── Create virtual GPU worker nodes ───────────────────────────────────────────
 # These are KWOK-managed nodes — no real VMs. The kwok controller (bundled in the
 # binary runtime) owns the heartbeat and the Ready condition for any node carrying
