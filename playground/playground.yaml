@@ -24,7 +24,7 @@ playground:
               # exact image and never serves a cached older :latest. Bump this tag
               # on every rebuild: make build prints the git-sha tag.
               # Image: kwokctl binary-runtime cache pre-warmed, repo at /workdir.
-              source: oci://ghcr.io/mercadoalex/gpu-k8s-lab:d3327d2
+              source: oci://ghcr.io/mercadoalex/gpu-k8s-lab:7715c97
           network:
             interfaces:
                 - network: local
