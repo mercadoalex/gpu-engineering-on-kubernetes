@@ -24,26 +24,28 @@ tasks:
     user: laborant
     timeout_seconds: 300
     run: |
-      set -e
+      # NO `set -e` here on purpose. The Ready-count uses `grep -c`, which exits 1
+      # when the count is 0 (normal on cold boot before nodes register). Under
+      # `set -e` that non-zero exit would abort the whole init task on the first
+      # loop iteration, leaving the playground stuck at "Init tasks 0/1" forever.
+      # This task must TOLERATE not-ready-yet and keep polling.
+      #
       # The KWOK cluster is created and kept alive by the kwok-cluster.service
       # systemd unit baked into the image (NOT by this init task). The examiner
-      # reaps an init task's process tree on completion, so a cluster created
-      # here would die. This task only WAITS for the systemd-managed cluster.
-      # Wait for the apiserver port derived from the kubeconfig the service wrote.
+      # reaps an init task's process tree on completion, so a cluster created here
+      # would die. This task only WAITS for the systemd-managed cluster.
       echo "Waiting for the systemd-managed KWOK cluster..."
       for i in $(seq 1 60); do
-        PORT=$(kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}' 2>/dev/null | sed -E 's#.*:([0-9]+)/?$#\1#')
-        if [ -n "${PORT}" ] && nc -z 127.0.0.1 "${PORT}" 2>/dev/null; then
-          break
+        READY=$(kubectl get nodes --no-headers 2>/dev/null | grep ' Ready ' | wc -l | tr -d ' ')
+        if [ "${READY:-0}" -ge 3 ]; then
+          echo "KWOK cluster ready — ${READY} nodes Ready ✓"
+          exit 0
         fi
+        echo "Waiting for 3 Ready nodes (have ${READY:-0})..."
         sleep 5
       done
-      # Loop until 3 nodes report Ready (or the 300s task timeout fires).
-      until [ "$(kubectl get nodes --no-headers 2>/dev/null | grep -c ' Ready ')" -ge 3 ]; do
-        echo "Waiting for 3 Ready nodes..."
-        sleep 5
-      done
-      echo "KWOK cluster ready ✓"
+      echo "ERROR: cluster did not reach 3 Ready nodes within timeout" >&2
+      exit 1
   write_thermal_alert:
     machine: dev-machine
     user: laborant
