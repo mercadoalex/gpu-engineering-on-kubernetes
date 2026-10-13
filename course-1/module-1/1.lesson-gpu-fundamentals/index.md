@@ -25,10 +25,14 @@ tasks:
     user: laborant
     run: |
       export KUBECONFIG=/home/laborant/.kube/config
-      # Verify KWOK virtual nodes exist and are Ready
-      READY=$(kubectl get nodes --no-headers 2>/dev/null | grep -c ' Ready ' || echo 0)
-      [ "$READY" -ge 2 ] || { echo "Expected >= 2 Ready nodes, got $READY"; exit 1; }
-      echo "$READY nodes Ready ✓"
+      # The KWOK cluster is brought up by the kwok-cluster.service systemd unit on
+      # boot (~15-30s). There is no init task gating the playground, so this first
+      # grading task doubles as the "wait for cluster" step: it polls until >= 2
+      # nodes are Ready, then passes. grep piped to wc -l (not grep -c) so a zero
+      # count returns exit 0, not 1.
+      READY=$(kubectl get nodes --no-headers 2>/dev/null | grep ' Ready ' | wc -l | tr -d ' ')
+      [ "${READY:-0}" -ge 2 ] || { echo "Waiting for KWOK nodes to be Ready (have ${READY:-0})..."; exit 1; }
+      echo "${READY} nodes Ready ✓"
 
   verify_no_gpu_before:
     machine: dev-machine

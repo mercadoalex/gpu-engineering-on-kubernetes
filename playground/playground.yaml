@@ -45,32 +45,21 @@ playground:
         # Grafana (:3000) and Prometheus (:9090) tabs are added in Module 5
         # (GPU Observability). They are omitted here so Modules 1-4 don't show
         # dead tabs with connection errors before those services exist.
-    initTasks:
-        init_kwok_cluster:
-            init: true
-            machine: dev-machine
-            user: laborant
-            timeout_seconds: 300
-            run: |
-                # The KWOK cluster is created and kept alive by the kwok-cluster.service
-                # systemd unit baked into the image. This init task only WAITS for it to
-                # be ready and makes the kubeconfig discoverable to later shells + the examiner.
-                export KUBECONFIG=/home/laborant/.kube/config
-                grep -q 'KUBECONFIG=' "$HOME/.bashrc" 2>/dev/null || \
-                  echo 'export KUBECONFIG=/home/laborant/.kube/config' >> "$HOME/.bashrc"
-                echo "Waiting for the systemd-managed KWOK cluster..."
-                for i in $(seq 1 60); do
-                  READY=$(kubectl get nodes --no-headers 2>/dev/null | grep ' Ready ' | wc -l | tr -d ' ')
-                  if [ "${READY:-0}" -ge 3 ]; then
-                    echo "KWOK cluster ready — ${READY} nodes Ready"
-                    kubectl get nodes
-                    exit 0
-                  fi
-                  echo "Waiting for 3 Ready nodes (have ${READY:-0})..."
-                  sleep 5
-                done
-                echo "ERROR: cluster did not reach 3 Ready nodes within timeout" >&2
-                exit 1
+    #
+    # NO initTasks: on purpose. The KWOK cluster is created and kept alive by the
+    # kwok-cluster.service systemd unit baked into the image, which runs on boot
+    # and brings up 3 Ready nodes in ~15-30s. We deliberately do NOT use an iximiuz
+    # init task:
+    #   - This is a single-machine custom-image playground. The platform injects
+    #     `controlPlaneOnly: true` onto init tasks here and they never dispatch
+    #     (status stuck at "created"), hanging the "Warming up" screen forever.
+    #     Confirmed Oct 2026 vs. the working multi-machine k8s-omni/rancher-k3s
+    #     playgrounds, whose init tasks carry NO controlPlaneOnly flag.
+    #   - With no init task there is no "Warming up" gate: the student lands
+    #     straight in the terminal, and the cluster finishes coming up moments
+    #     later. The lesson's first grading task waits for the nodes to be Ready.
+    # If iximiuz support later clarifies controlPlaneOnly, an init task can be
+    # reintroduced here (see course-1/scripts/init-task-tier1.yaml for the shape).
     accessControl:
         canList:
             - owner

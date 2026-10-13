@@ -59,6 +59,34 @@ playground:
 1. Is there an `init: true` task in a lesson `index.md`? → That's the bug. Move it to the playground manifest `initTasks:`.
 2. Did you re-run `labctl playground update` after changing `initTasks:`? A content push does NOT update init tasks.
 3. Did you restart the playground (fresh instance)? A running VM keeps the old init tasks.
+4. `labctl playground tasks <play-id> --kind init -o json` — if the task is stuck at
+   `status: 10` (created) and shows **`controlPlaneOnly: true`**, see the warning below.
+
+## ⚠️ `controlPlaneOnly: true` on single-machine custom playgrounds (unresolved)
+
+On a **single-machine** playground built from a custom OCI image (one machine, e.g.
+`dev-machine`, no separate `cplane-01`), the platform INJECTS `controlPlaneOnly: true`
+onto init tasks — a field you did NOT write and that does NOT appear in working
+multi-machine playgrounds (verified: `labctl playground manifest k8s-omni` shows zero
+`controlPlaneOnly`). The task then never dispatches (stuck at `status: 10` / "created")
+and the "Warming up" spinner hangs forever. `labctl playground start -f <manifest>`
+does NOT clear it — a fresh run re-injects the flag. Confirmed Oct 2026 on the GPU course.
+
+**Working playgrounds that use init tasks (k8s-omni, rancher-k3s) all have a real
+multi-node topology with a `cplane-01` control-plane machine.** A single custom-image
+machine does not satisfy whatever role classification the platform expects.
+
+**Pragmatic workaround (what the GPU course does):** do NOT use an iximiuz init task
+on a single-machine custom-image playground. Instead:
+- Bake a **systemd service** into the image that provisions the environment on boot
+  (e.g. `kwok-cluster.service` creating the KWOK cluster). systemd owns it, it persists.
+- Omit `initTasks:` entirely → no "Warming up" gate → the student lands straight in the
+  terminal while the service finishes in the background.
+- Make the lesson's FIRST grading task poll-and-wait for readiness (it runs in a loop,
+  so it goes green on its own once the service is up).
+
+Revisit init tasks only if iximiuz support clarifies the `controlPlaneOnly` behavior, or
+if you move to a multi-machine base with a real control-plane node.
 
 ---
 
