@@ -1,0 +1,31 @@
+# Image TODO: hami-resource-model-gpumem-gpucores-v1.png
+
+## Purpose
+Teach the HAMi resource model visually: one physical GPU divided into gpumem (MB of
+VRAM) blocks and gpucores (percent of compute) wedges, shared by several tenants.
+
+## Composition breakdown
+- Center: one large neon-green GPU card, divided vertically into a memory half and a
+  compute half.
+- Memory half: five stacked blocks each labeled "gpumem: 4000 MB", filling a 24 GB
+  total bar.
+- Compute half: a circular gauge split into percentage wedges, one highlighted at
+  "gpucores: 30%".
+- Three small pod boxes ("tenant A", "tenant B", "tenant C") pointing to different
+  memory blocks and compute wedges, showing independent slices of the same card.
+- Caption: "one 24 GB L4 → many isolated tenants, each with its own gpumem + gpucores".
+
+## Gemini prompt
+Create a flat technical diagram illustrating the HAMi GPU resource model on one
+physical GPU. Draw a single large bright-green GPU card divided vertically into a
+memory half and a compute half. In the memory half, stack five blocks each labeled
+"gpumem: 4000 MB" filling a 24 GB total bar. In the compute half, draw a circular
+gauge split into percentage wedges with one wedge highlighted and labeled "gpucores:
+30%". Add three small pod boxes labeled "tenant A", "tenant B", and "tenant C", each
+pointing with a thin arrow to a different memory block and compute wedge, showing
+independent slices of the same card. Add a caption "one 24 GB L4 → many isolated
+tenants, each with its own gpumem + gpucores". Style: flat technical illustration,
+dark navy background (#0D1117), electric blue (#2F81F7) and neon green (#39D353)
+accents, off-white (#E6EDF3) labels, subtle hexagonal grid texture at 10% opacity, no
+photorealism, no gradients on solid elements, clean sans-serif labels, developer
+education platform aesthetic. Aspect ratio 16:9.

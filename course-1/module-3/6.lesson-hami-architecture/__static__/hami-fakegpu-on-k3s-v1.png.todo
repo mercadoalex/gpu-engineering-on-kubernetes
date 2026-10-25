@@ -1,0 +1,33 @@
+# Image TODO: hami-fakegpu-on-k3s-v1.png
+
+## Purpose
+Show the two operators on the k3s playground and what each one does:
+fake-gpu-operator invents the GPUs, HAMi schedules against them.
+
+## Composition breakdown
+- Left: a namespace card "gpu-operator" containing four small pod boxes labeled
+  "device-plugin", "status-updater", "topology-server", "nvidia-dcgm-exporter",
+  with caption "fabricates nvidia.com/gpu — no hardware".
+- Right: a namespace card "kube-system" containing one pod box "hami-scheduler
+  (2/2)" split into two containers "scheduler" and "webhook", caption "decides GPU
+  placement".
+- Center/bottom: a worker node card with a green GPU chip and node labels
+  "nvidia.com/gpu.product=Tesla-K80" and "run.ai/simulated-gpu-node-pool=default".
+- Arrows: fake-gpu-operator → node (writing capacity); HAMi → node (reading it).
+
+## Gemini prompt
+Create a flat technical diagram titled "Two operators on k3s". On the left, draw a
+namespace card labeled "gpu-operator" holding four small pod boxes labeled
+"device-plugin", "status-updater", "topology-server", and "nvidia-dcgm-exporter",
+with a caption "fabricates nvidia.com/gpu — no hardware". On the right, draw a
+namespace card labeled "kube-system" holding one pod box labeled "hami-scheduler
+(2/2)" split into two container sub-boxes "scheduler" and "webhook", with a caption
+"decides GPU placement". In the center-bottom, draw a worker node card with a bright
+green GPU chip and two node-label tags "nvidia.com/gpu.product=Tesla-K80" and
+"run.ai/simulated-gpu-node-pool=default". Add a thin arrow from the gpu-operator card
+to the node labeled "writes capacity" and a thin arrow from the HAMi card to the node
+labeled "reads capacity". Style: flat technical illustration, dark navy background
+(#0D1117), electric blue (#2F81F7) and neon green (#39D353) accents, off-white
+(#E6EDF3) labels, subtle hexagonal grid texture at 10% opacity, no photorealism, no
+gradients on solid elements, clean sans-serif labels, developer education platform
+aesthetic. Aspect ratio 16:9.

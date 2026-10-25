@@ -1,0 +1,36 @@
+# Image TODO: hami-architecture-components-v1.png
+
+## Purpose
+Open the lesson with a single picture of HAMi's four components on a Kubernetes
+cluster, making clear up front that the device-plugin is OFF in this lesson and
+that HAMi is CNCF Incubating.
+
+## Composition breakdown
+- Left: a vertical stack of three component cards — "HAMi scheduler", "HAMi
+  mutating webhook", "HAMi device-plugin (OFF in this lesson)". The device-plugin
+  card is greyed out with a dashed border.
+- Center: a Kubernetes API server box connected to the scheduler and webhook.
+- Right: a worker node card with a green GPU chip labeled "nvidia.com/gpu (from
+  fake-gpu-operator)" and two small pod boxes each tagged "gpumem" and "gpucores".
+- Footer banner: "HAMi = scheduler + webhook + device-plugin + in-container core —
+  software GPU sharing, no driver changes".
+- Top-right: a small "CNCF Incubating" badge.
+- Arrows: thin blue/elbow lines from API server to scheduler and webhook; from the
+  node to the pods.
+- Status colors: device-plugin card muted/dashed (disabled), everything else active.
+
+## Gemini prompt
+Create a flat technical architecture diagram titled "HAMi components on Kubernetes".
+On the left, stack three rounded-rectangle component cards labeled "HAMi scheduler",
+"HAMi mutating webhook", and "HAMi device-plugin (OFF in this lesson)"; grey out the
+device-plugin card and give it a dashed border. In the center, draw a Kubernetes API
+server box connected by thin elbow arrows to the scheduler and webhook cards. On the
+right, draw a worker node card containing a bright green GPU chip labeled
+"nvidia.com/gpu (from fake-gpu-operator)" and two small pod boxes each tagged "gpumem"
+and "gpucores". Add a footer banner reading "HAMi = scheduler + webhook + device-plugin
++ in-container core — software GPU sharing, no driver changes" and a small "CNCF
+Incubating" badge in the top-right corner. Style: flat technical illustration, dark navy
+background (#0D1117), electric blue (#2F81F7) and neon green (#39D353) accents, off-white
+(#E6EDF3) labels, subtle hexagonal grid texture at 10% opacity, no photorealism, no
+gradients on solid elements, clean sans-serif labels, developer education platform
+aesthetic. Aspect ratio 16:9.

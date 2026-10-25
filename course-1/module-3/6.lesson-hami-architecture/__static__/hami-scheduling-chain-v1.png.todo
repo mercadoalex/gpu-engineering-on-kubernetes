@@ -1,0 +1,34 @@
+# Image TODO: hami-scheduling-chain-v1.png
+
+## Purpose
+A numbered flow diagram of the HAMi scheduling chain: webhook rewrites schedulerName,
+hami-scheduler places the pod, and a side branch shows the hami.io/webhook ignore
+bypass to the default scheduler.
+
+## Composition breakdown
+- Step 1 (left): a kubectl apply arrow sending a pod manifest requesting
+  "nvidia.com/gpumem" into the cluster.
+- Step 2: the pod passing through a "HAMi mutating webhook" box that stamps
+  "spec.schedulerName = hami-scheduler" onto it (drawn as a label being written).
+- Step 3: the pod arriving at a "hami-scheduler" box choosing between two candidate
+  GPU nodes, annotated "accounts for gpumem + gpucores slices".
+- Step 4: the pod bound onto a node's GPU alongside an existing pod, both sharing one
+  green GPU chip.
+- Side branch: a second pod labeled "hami.io/webhook: ignore" taking a dashed arrow
+  straight to the default kube-scheduler, bypassing the webhook.
+
+## Gemini prompt
+Create a flat technical numbered flow diagram titled "HAMi scheduling chain". Step 1
+on the left: a "kubectl apply" arrow sending a pod manifest requesting
+"nvidia.com/gpumem" into the cluster. Step 2: the pod passing through a box labeled
+"HAMi mutating webhook" that stamps the label "spec.schedulerName = hami-scheduler"
+onto it. Step 3: the pod arriving at a box labeled "hami-scheduler" that evaluates two
+candidate GPU node cards and picks one, annotated "accounts for gpumem + gpucores
+slices". Step 4: the pod bound onto a node's GPU alongside an existing pod, both
+sharing one bright green GPU chip. Add a side branch: a second pod labeled
+"hami.io/webhook: ignore" following a dashed arrow straight to a "default
+kube-scheduler" box, bypassing the webhook. Number the four main steps 1-4. Style:
+flat technical illustration, dark navy background (#0D1117), electric blue (#2F81F7)
+and neon green (#39D353) accents, off-white (#E6EDF3) labels, subtle hexagonal grid
+texture at 10% opacity, no photorealism, no gradients on solid elements, clean
+sans-serif labels, developer education platform aesthetic. Aspect ratio 16:9.
