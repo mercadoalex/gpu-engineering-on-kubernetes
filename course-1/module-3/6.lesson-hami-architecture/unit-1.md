@@ -403,19 +403,38 @@ EOF
 kubectl get pod hami-fake-gpu-pod -w
 ```
 
-It should move from `Pending` to `Running` within a few seconds. Press `Ctrl+C` once it is `Running`, then confirm which node it landed on:
+It should move from `Pending` to `Running` within a few seconds. Press `Ctrl+C` once it is `Running`, then confirm it landed on the fake-GPU node:
 
 ```bash
 kubectl get pod hami-fake-gpu-pod -o wide
 ```
 
-Now the payoff — run `nvidia-smi` **inside** the pod. fake-gpu-operator intercepts it and prints a simulated card:
+The `NODE` column shows the node that advertises the fake GPUs. Now confirm the pod is
+actually holding a GPU — this is the real point: Kubernetes placed a pod that claimed
+`nvidia.com/gpu: 1` onto a node with GPU capacity, with no real hardware anywhere.
 
 ```bash
-kubectl exec hami-fake-gpu-pod -- nvidia-smi
+kubectl get pod hami-fake-gpu-pod -o jsonpath='{.spec.containers[0].resources.limits}'; echo
 ```
 
-You will see a simulated **Tesla-K80** with a utilization figure in the 10–30% band (that range comes from the `run.ai/simulated-gpu-utilization: "10-30"` annotation on the pod). No hardware ran a single instruction — the operator fabricated the output.
+You'll see `{"nvidia.com/gpu":"1"}` — the pod requested one (fake) GPU and the scheduler
+honored it. That is the entire whole-GPU scheduling path you have been learning, running
+end to end on zero real silicon.
+
+::hint-box
+---
+:summary: What about the simulated nvidia-smi? (optional — and why it may error)
+---
+fake-gpu-operator *also* tries to inject a fake `nvidia-smi` into GPU pods so
+`kubectl exec <pod> -- nvidia-smi` prints a made-up card (e.g. a Tesla-K80 at 10–30%
+utilization from the `run.ai/simulated-gpu-utilization` annotation). It's a fun flourish,
+but it's **version-sensitive** — on some operator versions the shim panics with
+`invalid character ... looking for beginning of value` because it can't parse the node's
+simulated-topology config. If you hit that, don't worry: it has nothing to do with HAMi
+or with scheduling. The GPU *request and placement* — the thing that actually matters —
+is already proven by the `resources.limits` above. Real `nvidia-smi` output comes from a
+real driver on real hardware in **Lesson 6.4**.
+::
 
 ::image-box
 ---
