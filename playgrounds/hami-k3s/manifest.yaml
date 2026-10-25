@@ -140,7 +140,10 @@ playground:
       user: laborant
       needs:
         - init_kubeconfig_devmachine
-      timeout_seconds: 300
+      # 600s (was 300): first run pulls the fake-gpu-operator OCI chart + its
+      # device-plugin/status-updater/dcgm images over the network on a cold node,
+      # which exceeded 300s and timed out at "Init tasks 1/3".
+      timeout_seconds: 600
       run: |
         export KUBECONFIG="$HOME/.kube/config"
         # Namespace for the fake-gpu-operator, labelled privileged so its
@@ -180,7 +183,10 @@ playground:
       user: laborant
       needs:
         - init_fake_gpu_operator
-      timeout_seconds: 600
+      # 900s (was 600): HAMi chart pull + scheduler/webhook image pulls + the
+      # 480s rollout wait can stack up on a cold node; give generous headroom so
+      # the whole init chain (kubeconfig → fake-gpu-operator → hami) finishes.
+      timeout_seconds: 900
       run: |
         export KUBECONFIG="$HOME/.kube/config"
         helm repo add hami-charts https://project-hami.github.io/HAMi/
