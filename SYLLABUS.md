@@ -171,18 +171,34 @@ is the teaching default; DRA mode is a forward-reference to Module 2's DRA lesso
 6. Compare **binpack** (fill one GPU before using the next) vs **spread** (distribute)
    placement policies and observe the different packing.
 
-**Tier:** 1 (KWOK). HAMi's control plane (scheduler/webhook/device-plugin) are the
-pieces that run; on KWOK, verify via node resources + scheduling decisions rather than
-real CUDA execution (same simulation boundary as the rest of Tier 1 — call this out in
-a hint box, consistent with Lesson 1.1's honesty about what KWOK can and can't do).
+**Tier:** 1 (free, no real GPU) — BUT on a **dedicated kind-based playground**, NOT the
+KWOK playground the rest of Module 1–5 use. This is the critical design decision:
 
-**Note:** HAMi's device-plugin runs as a pod. If KWOK's pod-simulation prevents the
-HAMi device-plugin from actually patching node resources (the same class of issue hit
-with the fake-gpu-operator in Lesson 1.1 — see `.kiro/steering/iximiuz-init-tasks.md`),
-fall back to directly patching `nvidia.com/gpumem` + `nvidia.com/gpucores` onto the KWOK
-nodes to demonstrate the scheduling/packing behavior. Decide during the build which path
-HAMi actually takes on KWOK — do not assume the operator pods run. This is a known KWOK
-gotcha; verify empirically before writing the activities.
+**Why kind + fake-gpu-operator, not KWOK.** HAMi's value is REAL slicing — its
+scheduler, webhook, and device-plugin pods must actually EXECUTE and enforce memory/
+compute isolation. KWOK only *simulates* pods (they never run their containers), so
+HAMi's components would be no-ops there — the exact failure mode hit with the
+fake-gpu-operator in Lesson 1.1. HAMi's own official **Lab 2** (see hami-workshop repo)
+solves this by running on **kind** (real kubelet) + **run-ai/fake-gpu-operator** (whose
+pods genuinely execute because kind has a kubelet). That combo gives a fully working
+HAMi install with fractional slicing, on a laptop, with no real GPU. We mirror that.
+
+**Dedicated playground:** a new iximiuz playground (`hami-kind-...`) whose image/base
+provides kind (real K8s cluster-in-container) + fake-gpu-operator + HAMi preinstalled or
+installed by the lesson. Lessons 3.1–3.5 keep the KWOK playground; 3.6 points its
+`playground.name` at the kind playground. Build the kind image/base the same way the
+KWOK image was built (Dockerfile → ghcr.io → labctl playground create).
+
+**Licensing:** HAMi is Apache-2.0 and ships an official `Project-HAMi/hami-workshop`
+(hands-on tutorials). We may adapt the technical approach (kind + fake-gpu-operator +
+HAMi install flow) freely with attribution. Write ORIGINAL prose/tasks; cite HAMi; do
+not copy their text verbatim. Reference: https://github.com/Project-HAMi/hami-workshop
+
+**Build note:** because this runs on kind with a real kubelet, HAMi installs and
+functions normally — `helm install hami`, its pods actually run, and real fractional
+scheduling + isolation work. No direct-node-patch hack needed (that was only for KWOK).
+This is a genuinely working HAMi demo, which is a strong course selling point: "slice a
+GPU across 3 workloads, for free, on your laptop."
 
 **Graded challenge for the module:** pack 3 inference pods onto a single simulated GPU
 with distinct memory slices, prove the 4th pods pends on over-request. (This is the
@@ -193,10 +209,16 @@ Module 3 `::card` challenge.)
 ## Open questions / decisions needed
 
 - [ ] **Lesson count per module** — proposed above (3/4/6/3/4/3/4/1). Adjust?
-- [ ] **HAMi on KWOK** — confirm whether HAMi's device-plugin pod actually patches
-      node resources on kubelet-less KWOK nodes, or whether we patch
-      `nvidia.com/gpumem`/`gpucores` directly (as done for GPUs in Lesson 1.1). Verify
-      empirically at build time. See Lesson 3.6 design note.
+- [x] **HAMi substrate** — RESOLVED: HAMi gets its own dedicated **kind +
+      fake-gpu-operator** playground (not KWOK), so its pods actually run and real
+      slicing works. Mirrors HAMi's official Lab 2. Needs a new kind-based lab image +
+      playground built before Lesson 3.6 content. See Lesson 3.6 design note.
+- [ ] **kind-in-microVM** — verify a kind cluster (Docker-in-the-VM) actually boots
+      inside the iximiuz Firecracker microVM for the HAMi playground. kind needs a
+      container runtime; earlier we DROPPED kind from the KWOK image because kind-in-
+      microVM was unreliable. The HAMi playground must prove kind works there (or use
+      iximiuz's official `k3s`/`kind` base which is built for this) BEFORE building the
+      lesson. This is the main build risk for 3.6.
 - [ ] **Playground init task** — all Tier 1 lessons need a shared init task that creates
       the KWOK cluster + clones the repo to `/workdir`. Build once, reuse across modules.
 - [ ] **Tier 2 gating** — Modules 6–8 need the GCP SA key baked into the VM image (or a
