@@ -7,8 +7,10 @@
 the student's hands on a terminal within the first 5 minutes. No slides, no theory
 without a command to run.
 
-**Course total:** 8 modules · 28 lessons · ~24 hours
+**Course total:** 8 modules · 29 lessons · ~25 hours
 **Tier 1 (local KWOK sim, free):** Modules 1–5 · **Tier 2 (GCP GPU):** Modules 6–8
+**Note:** Lesson 3.6 (HAMi architecture) runs on a dedicated **k3s** playground
+(`hami-k3s-b5cd6d78`), not the KWOK one — it needs a real kubelet. Still free / Tier 1.
 
 ---
 
@@ -19,7 +21,7 @@ without a command to run.
 |---|--------|------------------|-------|
 | 1.1 | **Your Cluster Has No Idea What a GPU Is (Yet)** ✅ *built* | Install ghostgpu on KWOK, go from 0→4 GPUs, schedule a pod, break it with an over-request | 5 |
 | 1.2 | **What's Actually Inside a GPU (and Why K8s Doesn't Care)** | Read `nvidia-smi` output from a captured sample, map SMs/VRAM/tensor cores to the opaque `nvidia.com/gpu` integer; inspect a node's extended-resource data model | 3 |
-| 1.3 | **MIG, Time-Slicing, vGPU: Three Ways to Share One GPU** | Simulate each sharing mode's node labels in KWOK, schedule pods against `nvidia.com/mig-1g.5gb`, reason about isolation guarantees. Forward-reference: software-defined fractional sharing with HAMi is covered hands-on in Lesson 3.6. | 4 |
+| 1.3 | **MIG, Time-Slicing, vGPU: Three Ways to Share One GPU** | Simulate each sharing mode's node labels in KWOK, schedule pods against `nvidia.com/mig-1g.5gb`, reason about isolation guarantees. Forward-reference: HAMi's software sharing architecture in Lesson 3.6 (free), real HAMi slicing on hardware in Lesson 6.4. | 4 |
 
 ---
 
@@ -45,7 +47,7 @@ without a command to run.
 | 3.3 | **Preemption: Who Gets Evicted When the Cluster Is Full** | Priority classes, configure preemption policy, watch a low-prio job get evicted for a high-prio one | 4 |
 | 3.4 | **Gang Scheduling with Volcano: Why Training Jobs Deadlock** | Submit a 4-pod job without gang (deadlock), then with Volcano `minAvailable` (all-or-nothing) | 5 |
 | 3.5 | **DRF Fair-Share: Make Volcano Divide Resources Fairly** | Configure Volcano queues with DRF, submit competing jobs, observe fair division | 4 |
-| 3.6 | **Fractional GPU Sharing with HAMi: One GPU, Many Workloads** | Install HAMi (CNCF Incubating GPU-virtualization middleware) on the KWOK cluster; schedule pods that request a *slice* of a GPU via `nvidia.com/gpumem` (memory in MB or %) and `nvidia.com/gpucores` (compute %); pack multiple pods onto one GPU; break it by over-requesting memory and watch HAMi's hard isolation reject it; compare binpack vs spread placement. | 6 |
+| 3.6 | **Inside HAMi: The Architecture of GPU Sharing (no GPU needed)** | On a dedicated k3s playground, install run-ai/fake-gpu-operator + HAMi (scheduler + webhook, `devicePlugin.enabled=false`); watch fake `nvidia.com/gpu` appear; trace the full scheduling chain (webhook → hami-scheduler → pod placement); learn the `gpumem`/`gpucores` resource *model*; run a GPU pod and see simulated `nvidia-smi`; tour the HAMi WebUI. HONEST scope (matches HAMi's own Lab 2): this teaches HAMi's components and scheduling workflow on fake GPUs — real memory/compute slicing needs real hardware and is done in Lesson 6.4. | 6 |
 
 ---
 
@@ -72,14 +74,15 @@ without a command to run.
 
 ---
 
-## Module 6 — NVIDIA GPU Operator in Production
-**Tier 2 (GCP) · 2 hr · 3 lessons** — First real GPU. Install the full operator stack.
+## Module 6 — NVIDIA GPU Operator & GPU Sharing in Production
+**Tier 2 (GCP) · 3 hr · 4 lessons** — Real GPU. Install the operator stack; partition and share a real card.
 
 | # | Lesson | Hands-on outcome | Tasks |
 |---|--------|------------------|-------|
 | 6.1 | **Your First Real GPU Node on GKE** | Provision a `g2-standard-4` (L4), verify the node joins, see real `nvidia.com/gpu` | 3 |
 | 6.2 | **Install the GPU Operator (Driver → Toolkit → Plugin → DCGM)** | Helm install, watch each component roll out, verify node labels | 4 |
 | 6.3 | **Partition an A100 with MIG (Single vs Mixed Strategy)** | Enable MIG, create 7× `1g.5gb`, schedule a pod to one partition, confirm isolation | 4 |
+| 6.4 | **Real Fractional GPU Sharing with HAMi (on a live L4)** | On the real GPU node, install HAMi with its device-plugin ENABLED; schedule pods that request true slices via `nvidia.com/gpumem` (MB) and `nvidia.com/gpucores` (%); pack 3 workloads onto one physical L4; prove hard isolation by over-requesting memory and watching it get rejected; compare binpack vs spread. This is the real-hardware payoff that Lesson 3.6 set up on fake GPUs. Pairs with HAMi's own Lab 1 (real T4). | 5 |
 
 ---
 
@@ -135,70 +138,79 @@ without a command to run.
 
 ---
 
-## Lesson 3.6 — Fractional GPU Sharing with HAMi (detailed design)
+## HAMi — two-lesson split (detailed design)
 
-**Why this lesson matters:** Lesson 1.3 teaches the *hardware* sharing modes (MIG,
-time-slicing, vGPU) conceptually. HAMi is the *software* sharing layer engineers
-actually deploy to pack many workloads onto one GPU — with real memory + compute
-isolation — WITHOUT needing MIG-capable hardware. It's CNCF Incubating, Kubernetes-
-native, DRA-aware, and directly serves the course's < $10/student cost thesis:
-fractional sharing means one simulated GPU serves many student pods.
+HAMi is taught in TWO lessons, mirroring how the HAMi project itself splits it
+(Lab 2 = fake/architecture, Lab 1 = real GPU/slicing). This is the HONEST split —
+verified against HAMi's official Lab 2, which states plainly that real memory slicing
+(`gpumem`), compute limits (`gpucores`), CUDA execution, and isolation REQUIRE a real GPU.
 
-**What HAMi is (teach honestly):** Heterogeneous AI Computing Virtualization
-Middleware. Kubernetes treats a GPU as one indivisible `nvidia.com/gpu` integer — a
-pod asking for 1 GPU takes the whole card even if it uses 10% of it. HAMi adds two
-extra resource dimensions so a pod requests a *slice*:
-- `nvidia.com/gpu` — number of physical GPUs to share across
-- `nvidia.com/gpumem` — device memory in MB (or `nvidia.com/gpumem-percentage`)
-- `nvidia.com/gpucores` — percentage of GPU compute cores (0–100)
+### Lesson 3.6 — Inside HAMi: The Architecture of GPU Sharing (Tier 1, free)
 
-HAMi runs in **device-plugin mode** (HAMi schedules, via node annotations + a
-scheduler extender) or **DRA mode** (K8s schedules via ResourceSlice/ResourceClaim —
-requires K8s 1.34+ with the DRA Consumable Capacity gate + CDI). Device-plugin mode
-is the teaching default; DRA mode is a forward-reference to Module 2's DRA lesson.
+**Scope (what genuinely works on fake GPUs):** install, components, scheduling chain,
+the resource *model*. NOT real slicing — that's 6.4. Be explicit about this boundary
+in a hint box, exactly like Lesson 1.1 is honest about simulated GPUs.
 
-**Hands-on arc (break-it included):**
-1. Install HAMi via Helm onto the KWOK cluster (`helm install hami hami-charts/hami`).
-2. Inspect what it added — the scheduler, the device plugin, the webhook, and the
-   new `nvidia.com/gpumem` / `nvidia.com/gpucores` resources on nodes.
-3. Schedule pod A requesting `gpu: 1, gpumem: 4000, gpucores: 30` — lands on a GPU.
-4. Schedule pods B and C with the same slice — all three PACK onto one physical GPU
-   (vs. the whole-card model where only one would fit). `kubectl describe node` shows
-   the slices adding up.
-5. **Break it:** request `gpumem: 50000` on a 24 GB GPU → HAMi's hard isolation
-   rejects/pends it. Over-commit cores past 100% → same. Students see isolation is
-   real, not advisory.
-6. Compare **binpack** (fill one GPU before using the next) vs **spread** (distribute)
-   placement policies and observe the different packing.
+**Substrate:** the dedicated **k3s** playground `hami-k3s-b5cd6d78` (already created by
+the user via `labctl playground create hami-k3s --base k3s`). The iximiuz k3s base is a
+REAL 4-VM cluster (dev-machine + cplane-01 + 2 workers, real kubelets, Helm preinstalled)
+— confirmed via `labctl playground manifest`. HAMi's scheduler/webhook pods actually run
+here (real kubelet), unlike KWOK. Lessons 3.1–3.5 keep the KWOK playground; only 3.6
+points `playground.name` at `hami-k3s-b5cd6d78`.
 
-**Tier:** 1 (free, no real GPU) — BUT on a **dedicated kind-based playground**, NOT the
-KWOK playground the rest of Module 1–5 use. This is the critical design decision:
+**Install flow (from HAMi Lab 2, adapt — Apache-2.0, cite, don't copy verbatim):**
+1. `kubectl create namespace gpu-operator` + label it `pod-security...=privileged`.
+2. Label a node `run.ai/simulated-gpu-node-pool=default`.
+3. `helm upgrade -i gpu-operator oci://ghcr.io/run-ai/fake-gpu-operator/fake-gpu-operator`
+   → nodes advertise fake `nvidia.com/gpu` (count, product, memory labels).
+4. `helm repo add hami-charts https://project-hami.github.io/HAMi/` then
+   `helm install hami hami-charts/hami -n kube-system --set devicePlugin.enabled=false`
+   (device-plugin OFF to avoid conflicting with fake-gpu-operator — this is WHY real
+   slicing is off here; HAMi only runs scheduler + webhook).
+5. Run a test pod with `hami.io/webhook: ignore` + `nvidia.com/gpu: 1` → schedules, and
+   `kubectl exec ... nvidia-smi` shows a simulated card.
 
-**Why kind + fake-gpu-operator, not KWOK.** HAMi's value is REAL slicing — its
-scheduler, webhook, and device-plugin pods must actually EXECUTE and enforce memory/
-compute isolation. KWOK only *simulates* pods (they never run their containers), so
-HAMi's components would be no-ops there — the exact failure mode hit with the
-fake-gpu-operator in Lesson 1.1. HAMi's own official **Lab 2** (see hami-workshop repo)
-solves this by running on **kind** (real kubelet) + **run-ai/fake-gpu-operator** (whose
-pods genuinely execute because kind has a kubelet). That combo gives a fully working
-HAMi install with fractional slicing, on a laptop, with no real GPU. We mirror that.
+**Hands-on arc:** install fake-gpu-operator → see fake GPUs on nodes → install HAMi →
+inspect scheduler+webhook (`kubectl get pods -n kube-system | grep hami`, the 2/2 pod) →
+trace the scheduling chain (webhook rewrites schedulerName → hami-scheduler places pod) →
+learn the `gpumem`/`gpucores` resource MODEL (explain, don't run) → run a fake GPU pod,
+`nvidia-smi` inside it → honest hint box: "why can't we slice here? device-plugin is off,
+fake GPUs have no real memory to partition — Lesson 6.4 does the real thing."
 
-**Dedicated playground:** a new iximiuz playground (`hami-kind-...`) whose image/base
-provides kind (real K8s cluster-in-container) + fake-gpu-operator + HAMi preinstalled or
-installed by the lesson. Lessons 3.1–3.5 keep the KWOK playground; 3.6 points its
-`playground.name` at the kind playground. Build the kind image/base the same way the
-KWOK image was built (Dockerfile → ghcr.io → labctl playground create).
+**Grading tasks (k3s playground; init tasks live in the PLAYGROUND manifest, NOT here):**
+verify_cluster_ready, verify_fake_gpu_operator_installed, verify_fake_gpus_present,
+verify_hami_scheduler_running, verify_gpu_pod_scheduled, verify_lesson_complete.
+Each `run:` starts with `export KUBECONFIG=$HOME/.kube/config` (the k3s playground's
+init task writes it there, per the Rancher pattern).
 
-**Licensing:** HAMi is Apache-2.0 and ships an official `Project-HAMi/hami-workshop`
-(hands-on tutorials). We may adapt the technical approach (kind + fake-gpu-operator +
-HAMi install flow) freely with attribution. Write ORIGINAL prose/tasks; cite HAMi; do
-not copy their text verbatim. Reference: https://github.com/Project-HAMi/hami-workshop
+**Playground manifest (`playgrounds/hami-k3s/manifest.yaml`):** model on
+`rancher_ex/playgrounds/rancher-k3s/manifest.yaml`. initTasks (in the MANIFEST): 
+init_kubeconfig_devmachine (ssh cplane-01, fetch k3s.yaml, write ~/.kube/config +
+.bashrc), init_fake_gpu_operator (needs kubeconfig; helm install + label node), init_hami
+(needs fake-gpu-operator; helm install with devicePlugin.enabled=false). Multi-machine
+k3s topology has a real control-plane, so the single-machine `controlPlaneOnly` hang does
+NOT apply. timeout_seconds valid here.
 
-**Build note:** because this runs on kind with a real kubelet, HAMi installs and
-functions normally — `helm install hami`, its pods actually run, and real fractional
-scheduling + isolation work. No direct-node-patch hack needed (that was only for KWOK).
-This is a genuinely working HAMi demo, which is a strong course selling point: "slice a
-GPU across 3 workloads, for free, on your laptop."
+### Lesson 6.4 — Real Fractional GPU Sharing with HAMi (Tier 2, real L4)
+
+**Scope:** the real payoff. On the live GCP L4 GPU node (from 6.1/6.2), install HAMi with
+`devicePlugin.enabled=true` (real device-plugin, no fake-gpu-operator). Now `gpumem` and
+`gpucores` actually partition the physical card.
+
+**Hands-on arc (break-it works for real here):**
+1. Install HAMi (device-plugin enabled) on the real GPU node.
+2. Schedule pod A: `nvidia.com/gpu: 1, nvidia.com/gpumem: 4000, nvidia.com/gpucores: 30`.
+3. Pods B, C same slice → all three pack onto ONE physical L4 (24 GB). `nvidia-smi` and
+   HAMi show the real partitioning.
+4. **Break it (real):** request `gpumem: 50000` on the 24 GB L4 → HAMi's hard isolation
+   rejects it. A pod exceeding its memory slice at runtime gets OOM'd — real isolation.
+5. binpack vs spread placement on the real card.
+
+**Cost note:** runs on the same L4 node as 6.1–6.3, within the < $10/student guardrail.
+
+**Licensing (both lessons):** HAMi Apache-2.0; official `Project-HAMi/hami-workshop`.
+Adapt the approach with attribution; original prose. Refs: https://project-hami.io/ ,
+https://github.com/Project-HAMi/hami-workshop
 
 **Graded challenge for the module:** pack 3 inference pods onto a single simulated GPU
 with distinct memory slices, prove the 4th pods pends on over-request. (This is the
