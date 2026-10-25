@@ -10,6 +10,13 @@ In Lesson 1.1 you learned that `nvidia.com/gpu: 1` is an all-or-nothing number �
 
 [HAMi](https://project-hami.io/) is the piece that does. It is a CNCF project (currently **Incubating**) that lets several pods share one physical GPU — each pod asking for a slice of **memory** and a slice of **compute** — and it does this in software, without touching the NVIDIA driver or rebuilding the kernel. This lesson is the architecture tour: you will see HAMi's components, trace how a GPU pod flows through them, and learn the resource model you will use for real on live hardware in **Lesson 6.4**.
 
+> **Don't worry if this feels like a lot at first.** This lesson is a gentle,
+> no-GPU-needed walkthrough of *how HAMi is put together* — just enough to recognize
+> its parts and understand what it does. You don't have to master every detail here.
+> We go much deeper, on a real NVIDIA GPU, in **Module 6 (Lesson 6.4)**, where you'll
+> actually slice a card, pack several workloads onto it, and watch the limits enforce
+> themselves. Think of this lesson as the map; Module 6 is the territory.
+
 ::image-box
 ---
 :src: __static__/hami-architecture-components-v1.png
