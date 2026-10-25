@@ -7,7 +7,7 @@
 the student's hands on a terminal within the first 5 minutes. No slides, no theory
 without a command to run.
 
-**Course total:** 8 modules · 27 lessons · ~23 hours
+**Course total:** 8 modules · 28 lessons · ~24 hours
 **Tier 1 (local KWOK sim, free):** Modules 1–5 · **Tier 2 (GCP GPU):** Modules 6–8
 
 ---
@@ -19,7 +19,7 @@ without a command to run.
 |---|--------|------------------|-------|
 | 1.1 | **Your Cluster Has No Idea What a GPU Is (Yet)** ✅ *built* | Install ghostgpu on KWOK, go from 0→4 GPUs, schedule a pod, break it with an over-request | 5 |
 | 1.2 | **What's Actually Inside a GPU (and Why K8s Doesn't Care)** | Read `nvidia-smi` output from a captured sample, map SMs/VRAM/tensor cores to the opaque `nvidia.com/gpu` integer; inspect a node's extended-resource data model | 3 |
-| 1.3 | **MIG, Time-Slicing, vGPU: Three Ways to Share One GPU** | Simulate each sharing mode's node labels in KWOK, schedule pods against `nvidia.com/mig-1g.5gb`, reason about isolation guarantees | 4 |
+| 1.3 | **MIG, Time-Slicing, vGPU: Three Ways to Share One GPU** | Simulate each sharing mode's node labels in KWOK, schedule pods against `nvidia.com/mig-1g.5gb`, reason about isolation guarantees. Forward-reference: software-defined fractional sharing with HAMi is covered hands-on in Lesson 3.6. | 4 |
 
 ---
 
@@ -35,8 +35,8 @@ without a command to run.
 
 ---
 
-## Module 3 — GPU-Aware Scheduling (Kueue + Volcano)
-**Tier 1 · 4 hr · 5 lessons** — The core of the course: quota, fairness, gang scheduling.
+## Module 3 — GPU-Aware Scheduling (Kueue + Volcano + HAMi)
+**Tier 1 · 5 hr · 6 lessons** — The core of the course: quota, fairness, gang scheduling, and fractional sharing.
 
 | # | Lesson | Hands-on outcome | Tasks |
 |---|--------|------------------|-------|
@@ -45,6 +45,7 @@ without a command to run.
 | 3.3 | **Preemption: Who Gets Evicted When the Cluster Is Full** | Priority classes, configure preemption policy, watch a low-prio job get evicted for a high-prio one | 4 |
 | 3.4 | **Gang Scheduling with Volcano: Why Training Jobs Deadlock** | Submit a 4-pod job without gang (deadlock), then with Volcano `minAvailable` (all-or-nothing) | 5 |
 | 3.5 | **DRF Fair-Share: Make Volcano Divide Resources Fairly** | Configure Volcano queues with DRF, submit competing jobs, observe fair division | 4 |
+| 3.6 | **Fractional GPU Sharing with HAMi: One GPU, Many Workloads** | Install HAMi (CNCF Incubating GPU-virtualization middleware) on the KWOK cluster; schedule pods that request a *slice* of a GPU via `nvidia.com/gpumem` (memory in MB or %) and `nvidia.com/gpucores` (compute %); pack multiple pods onto one GPU; break it by over-requesting memory and watch HAMi's hard isolation reject it; compare binpack vs spread placement. | 6 |
 
 ---
 
@@ -107,7 +108,7 @@ without a command to run.
 
 | # | Lesson | Hands-on outcome | Tasks |
 |---|--------|------------------|-------|
-| 8.1 | **Run a 3-Team GPU Platform with Quota, Gang Scheduling, Observability, and Cost Guardrails** | 3 teams × 3 workload types (training gang, inference, data-prep); Kueue cohorts + Volcano + DCGM dashboards + CA cost limits; evaluated on scheduling correctness + cost efficiency | 6 |
+| 8.1 | **Run a 3-Team GPU Platform with Quota, Gang Scheduling, Fractional Sharing, Observability, and Cost Guardrails** | 3 teams × 3 workload types (training gang, fractional-shared inference via HAMi, data-prep); Kueue cohorts + Volcano + HAMi slicing + DCGM dashboards + CA cost limits; evaluated on scheduling correctness + packing efficiency + cost | 6 |
 
 ---
 
@@ -134,12 +135,92 @@ without a command to run.
 
 ---
 
+## Lesson 3.6 — Fractional GPU Sharing with HAMi (detailed design)
+
+**Why this lesson matters:** Lesson 1.3 teaches the *hardware* sharing modes (MIG,
+time-slicing, vGPU) conceptually. HAMi is the *software* sharing layer engineers
+actually deploy to pack many workloads onto one GPU — with real memory + compute
+isolation — WITHOUT needing MIG-capable hardware. It's CNCF Incubating, Kubernetes-
+native, DRA-aware, and directly serves the course's < $10/student cost thesis:
+fractional sharing means one simulated GPU serves many student pods.
+
+**What HAMi is (teach honestly):** Heterogeneous AI Computing Virtualization
+Middleware. Kubernetes treats a GPU as one indivisible `nvidia.com/gpu` integer — a
+pod asking for 1 GPU takes the whole card even if it uses 10% of it. HAMi adds two
+extra resource dimensions so a pod requests a *slice*:
+- `nvidia.com/gpu` — number of physical GPUs to share across
+- `nvidia.com/gpumem` — device memory in MB (or `nvidia.com/gpumem-percentage`)
+- `nvidia.com/gpucores` — percentage of GPU compute cores (0–100)
+
+HAMi runs in **device-plugin mode** (HAMi schedules, via node annotations + a
+scheduler extender) or **DRA mode** (K8s schedules via ResourceSlice/ResourceClaim —
+requires K8s 1.34+ with the DRA Consumable Capacity gate + CDI). Device-plugin mode
+is the teaching default; DRA mode is a forward-reference to Module 2's DRA lesson.
+
+**Hands-on arc (break-it included):**
+1. Install HAMi via Helm onto the KWOK cluster (`helm install hami hami-charts/hami`).
+2. Inspect what it added — the scheduler, the device plugin, the webhook, and the
+   new `nvidia.com/gpumem` / `nvidia.com/gpucores` resources on nodes.
+3. Schedule pod A requesting `gpu: 1, gpumem: 4000, gpucores: 30` — lands on a GPU.
+4. Schedule pods B and C with the same slice — all three PACK onto one physical GPU
+   (vs. the whole-card model where only one would fit). `kubectl describe node` shows
+   the slices adding up.
+5. **Break it:** request `gpumem: 50000` on a 24 GB GPU → HAMi's hard isolation
+   rejects/pends it. Over-commit cores past 100% → same. Students see isolation is
+   real, not advisory.
+6. Compare **binpack** (fill one GPU before using the next) vs **spread** (distribute)
+   placement policies and observe the different packing.
+
+**Tier:** 1 (KWOK). HAMi's control plane (scheduler/webhook/device-plugin) are the
+pieces that run; on KWOK, verify via node resources + scheduling decisions rather than
+real CUDA execution (same simulation boundary as the rest of Tier 1 — call this out in
+a hint box, consistent with Lesson 1.1's honesty about what KWOK can and can't do).
+
+**Note:** HAMi's device-plugin runs as a pod. If KWOK's pod-simulation prevents the
+HAMi device-plugin from actually patching node resources (the same class of issue hit
+with the fake-gpu-operator in Lesson 1.1 — see `.kiro/steering/iximiuz-init-tasks.md`),
+fall back to directly patching `nvidia.com/gpumem` + `nvidia.com/gpucores` onto the KWOK
+nodes to demonstrate the scheduling/packing behavior. Decide during the build which path
+HAMi actually takes on KWOK — do not assume the operator pods run. This is a known KWOK
+gotcha; verify empirically before writing the activities.
+
+**Graded challenge for the module:** pack 3 inference pods onto a single simulated GPU
+with distinct memory slices, prove the 4th pods pends on over-request. (This is the
+Module 3 `::card` challenge.)
+
+---
+
 ## Open questions / decisions needed
 
-- [ ] **Lesson count per module** — proposed above (3/4/5/3/4/3/4/1). Adjust?
+- [ ] **Lesson count per module** — proposed above (3/4/6/3/4/3/4/1). Adjust?
+- [ ] **HAMi on KWOK** — confirm whether HAMi's device-plugin pod actually patches
+      node resources on kubelet-less KWOK nodes, or whether we patch
+      `nvidia.com/gpumem`/`gpucores` directly (as done for GPUs in Lesson 1.1). Verify
+      empirically at build time. See Lesson 3.6 design note.
 - [ ] **Playground init task** — all Tier 1 lessons need a shared init task that creates
       the KWOK cluster + clones the repo to `/workdir`. Build once, reuse across modules.
 - [ ] **Tier 2 gating** — Modules 6–8 need the GCP SA key baked into the VM image (or a
       separate Tier-2 playground). Decide before building Module 6.
 - [ ] **Challenges** — syllabus lists tasks only. Which lessons also get a graded
       `::card` challenge? (Suggest: 1 per module, on the final lesson.)
+
+---
+
+## Reference material (source links)
+
+External sources that validate or enrich course concepts. Cite these in lessons
+where relevant (not as required reading — the course is hands-on first).
+
+| Topic | Link | Where it's used |
+|-------|------|-----------------|
+| Why K8s has no native GPU knowledge (scheduler + cAdvisor understand only CPU/memory; GPUs are opaque vendor hardware) | https://newsletter.devopscube.com/p/gpu-scheduling-kubernetes | Reinforces the thesis of Lesson 1.1 — cite as further reading |
+| GPU sharing strategies on Kubernetes | https://newsletter.devopscube.com/p/kubernetes-gpu-sharing-strategies | Lesson 1.3 (MIG/time-slicing/vGPU) and Lesson 3.6 (HAMi) |
+| HAMi — Heterogeneous AI Computing Virtualization Middleware (CNCF Incubating) | https://project-hami.io/ | Lesson 3.6 — the dedicated fractional-sharing lesson |
+| HAMi NVIDIA pod example (`gpucores`, `gpumem`) | https://github.com/Project-HAMi/HAMi/blob/master/examples/nvidia/default_use.yaml | Lesson 3.6 — canonical pod spec for the activities |
+
+**Key framing pulled from the DevOpsCube GPU-scheduling piece (rephrased for compliance
+with licensing):** Kubernetes natively understands CPU and memory because the kubelet
+reports them via cAdvisor; GPUs are specialized vendor hardware the scheduler has no
+built-in model for (no notion of a GPU's memory or compute speed). That gap — and how
+device plugins / DRA / HAMi fill it — is exactly what Module 1 and Lesson 3.6 teach.
+*Content was rephrased for compliance with licensing restrictions.*
