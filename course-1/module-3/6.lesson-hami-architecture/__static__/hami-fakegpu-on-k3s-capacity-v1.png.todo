@@ -1,0 +1,27 @@
+# Image TODO: hami-fakegpu-on-k3s-capacity-v1.png
+
+## Purpose
+Show fake-gpu-operator patching nvidia.com/gpu into a node's status.capacity, and
+that the scheduler reads it as a plain integer without knowing it is fake.
+
+## Composition breakdown
+- Center: a worker node card listing standard resources (cpu, memory, pods) plus a
+  highlighted green row "nvidia.com/gpu: 2" with a small label "simulated Tesla-K80,
+  ~11 GB each".
+- A dashed callout pointing at the GPU row: "patched by fake-gpu-operator's
+  device-plugin — no real hardware behind it".
+- Side: the kube-scheduler drawn reading the capacity, thought bubble "I see 2 GPUs
+  — I can't tell they're fake".
+
+## Gemini prompt
+Create a flat technical diagram of a Kubernetes worker node's status.capacity after a
+fake GPU operator installs. Draw a node card listing rows "cpu", "memory", "pods", and
+a highlighted bright-green row "nvidia.com/gpu: 2" with a small sub-label "simulated
+Tesla-K80, ~11 GB each". Add a dashed callout pointing at the GPU row reading "patched
+by fake-gpu-operator's device-plugin — no real hardware behind it". To the side, draw
+the kube-scheduler reading the node capacity with a thought bubble "I see 2 GPUs — I
+can't tell they're fake". Style: flat technical illustration, dark navy background
+(#0D1117), electric blue (#2F81F7) and neon green (#39D353) accents, off-white
+(#E6EDF3) labels, subtle hexagonal grid texture at 10% opacity, no photorealism, no
+gradients on solid elements, clean sans-serif labels, developer education platform
+aesthetic. Aspect ratio 16:9.

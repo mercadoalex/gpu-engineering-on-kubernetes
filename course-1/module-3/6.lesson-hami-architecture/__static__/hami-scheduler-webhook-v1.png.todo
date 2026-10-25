@@ -1,0 +1,31 @@
+# Image TODO: hami-scheduler-webhook-v1.png
+
+## Purpose
+Show that one HAMi pod carries two containers (scheduler + webhook = 2/2) and which
+chart objects accompany it, with the device-plugin DaemonSet clearly disabled.
+
+## Composition breakdown
+- Center: a pod card "hami-scheduler  2/2" split into two container boxes.
+  - Top box "scheduler" → arrow to Kubernetes API server, labeled "binds GPU pods to
+    nodes".
+  - Bottom box "webhook" → arrow from an incoming pod, labeled "mutates
+    spec.schedulerName".
+- Below the pod: four small resource cards — Deployment, Service, ConfigMap,
+  ServiceAccount.
+- Off to the side: a greyed-out, dashed card "device-plugin DaemonSet — DISABLED"
+  with a red X.
+
+## Gemini prompt
+Create a flat technical diagram of the HAMi scheduler pod in the kube-system
+namespace. Draw one pod card labeled "hami-scheduler  2/2" split into two stacked
+container boxes. From the top box labeled "scheduler", draw an arrow to a Kubernetes
+API server box labeled "binds GPU pods to nodes". Into the bottom box labeled
+"webhook", draw an arrow from an incoming pod labeled "mutates spec.schedulerName".
+Below the pod, draw four small rounded resource cards labeled "Deployment",
+"Service", "ConfigMap", and "ServiceAccount". Off to the right, draw a greyed-out,
+dashed-border card labeled "device-plugin DaemonSet — DISABLED" with a small red X.
+Style: flat technical illustration, dark navy background (#0D1117), electric blue
+(#2F81F7) and neon green (#39D353) accents, off-white (#E6EDF3) labels, subtle
+hexagonal grid texture at 10% opacity, no photorealism, no gradients on solid
+elements, clean sans-serif labels, developer education platform aesthetic.
+Aspect ratio 16:9.

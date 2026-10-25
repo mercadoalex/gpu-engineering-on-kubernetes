@@ -1,0 +1,37 @@
+# Lab-2 style test pod for Lesson 3.6 "Inside HAMi: The Architecture of GPU Sharing".
+# Adapted from HAMi's Lab 2 (Apache-2.0): https://project-hami.io/
+#
+# The `hami.io/webhook: ignore` label tells HAMi's mutating webhook to leave this
+# pod alone, so it is placed by the default scheduler (not hami-scheduler). That is
+# required here because HAMi's device-plugin is OFF — fake-gpu-operator owns the
+# nvidia.com/gpu resource, and real gpumem/gpucores slicing waits for Lesson 6.4.
+# The run.ai/simulated-gpu-utilization annotation makes the simulated nvidia-smi
+# report 10-30% GPU utilization inside the container.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hami-fake-gpu-pod
+  namespace: default
+  labels:
+    app: hami-fake-gpu-pod
+    course: gpu-engineering-on-kubernetes
+    module: "3"
+    hami.io/webhook: ignore
+  annotations:
+    run.ai/simulated-gpu-utilization: "10-30"
+spec:
+  containers:
+    - name: app
+      image: ubuntu:22.04
+      command: ["bash", "-lc", "sleep 3600"]
+      resources:
+        requests:
+          cpu: "100m"
+          memory: 128Mi
+        limits:
+          nvidia.com/gpu: 1
+  tolerations:
+    - key: nvidia.com/gpu
+      operator: Exists
+      effect: NoSchedule
+  restartPolicy: Never

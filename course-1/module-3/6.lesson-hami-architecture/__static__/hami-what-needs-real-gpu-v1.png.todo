@@ -1,0 +1,29 @@
+# Image TODO: hami-what-needs-real-gpu-v1.png
+
+## Purpose
+Draw the honest boundary of this lesson: what works on fake GPUs versus what needs a
+real GPU (Lesson 6.4).
+
+## Composition breakdown
+- Split illustration, divided by a dashed vertical line labeled "the honest boundary".
+- Left half (green background), headed "Works on fake GPUs (this lesson)": cards
+  reading "capacity advertising", "HAMi scheduler + webhook", "scheduling chain /
+  schedulerName rewrite", "pod reaches Running", "simulated nvidia-smi output".
+- Right half (amber background), headed "Needs a real GPU (Lesson 6.4)": cards reading
+  "real gpumem VRAM partition", "real gpucores compute limit", "OOM on over-request",
+  "binpack vs spread packing", "CUDA execution".
+
+## Gemini prompt
+Create a flat technical split illustration contrasting two sets of capabilities,
+divided by a dashed vertical line labeled "the honest boundary". On the left half with
+a green-tinted background, add the heading "Works on fake GPUs (this lesson)" and five
+small cards labeled "capacity advertising", "HAMi scheduler + webhook", "scheduling
+chain / schedulerName rewrite", "pod reaches Running", and "simulated nvidia-smi
+output". On the right half with an amber-tinted background, add the heading "Needs a
+real GPU (Lesson 6.4)" and five small cards labeled "real gpumem VRAM partition",
+"real gpucores compute limit", "OOM on over-request", "binpack vs spread packing", and
+"CUDA execution". Style: flat technical illustration, dark navy background (#0D1117),
+electric blue (#2F81F7) and neon green (#39D353) accents, amber (#F0883E) for the
+right-half heading, off-white (#E6EDF3) labels, subtle hexagonal grid texture at 10%
+opacity, no photorealism, no gradients on solid elements, clean sans-serif labels,
+developer education platform aesthetic. Aspect ratio 16:9.

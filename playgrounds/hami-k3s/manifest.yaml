@@ -1,0 +1,213 @@
+kind: playground
+
+# NOTE: `name` must match the suffixed name the platform assigned when the
+# playground was created with `labctl playground create hami-k3s --base k3s`
+# (it printed `hami-k3s-b5cd6d78`). Lesson 3.6's `index.md` references this same
+# name under `playground.name`.
+name: hami-k3s-b5cd6d78
+
+title: HAMi Architecture on K3s (fake GPUs)
+
+description: |
+  A four-VM K3s cluster with run-ai/fake-gpu-operator and HAMi (scheduler +
+  webhook, device-plugin off) preinstalled. Students land in a ready-to-explore
+  GPU-virtualization environment for Lesson 3.6 "Inside HAMi: The Architecture
+  of GPU Sharing" — no real NVIDIA GPU required. The fake GPUs advertise
+  nvidia.com/gpu so the HAMi scheduling chain can be traced end to end.
+
+categories:
+  - kubernetes
+
+playground:
+  networks:
+    - name: local
+      subnet: 172.16.0.0/24
+
+  machines:
+    - name: dev-machine
+      users:
+        - name: root
+        - name: laborant
+          default: true
+          welcome: |
+            Welcome to Lesson 3.6 — Inside HAMi: The Architecture of GPU Sharing.
+            fake-gpu-operator (namespace gpu-operator) and HAMi (scheduler +
+            webhook in kube-system, device-plugin OFF) are already installed on
+            this cluster. Your kubeconfig is ready — run `kubectl get nodes` to
+            start, then follow the lesson.
+      drives:
+        - source: k3s-dev-machine
+          mount: /
+          size: 30GiB
+      network:
+        interfaces:
+          - network: local
+            address: 172.16.0.5/24
+
+    - name: cplane-01
+      users:
+        - name: root
+        - name: laborant
+          default: true
+      drives:
+        - source: k3s-cplane
+          mount: /
+          size: 30GiB
+      network:
+        interfaces:
+          - network: local
+            address: 172.16.0.2/24
+
+    - name: node-01
+      users:
+        - name: root
+        - name: laborant
+          default: true
+      drives:
+        - source: k3s-node
+          mount: /
+          size: 30GiB
+      network:
+        interfaces:
+          - network: local
+            address: 172.16.0.3/24
+
+    - name: node-02
+      users:
+        - name: root
+        - name: laborant
+          default: true
+      drives:
+        - source: k3s-node
+          mount: /
+          size: 30GiB
+      network:
+        interfaces:
+          - network: local
+            address: 172.16.0.4/24
+
+  tabs:
+    - kind: terminal
+      name: Terminal
+      machine: dev-machine
+    - kind: ide
+      machine: dev-machine
+    - kind: kexp
+      machine: dev-machine
+    - kind: terminal
+      name: Terminal (cplane-01)
+      machine: cplane-01
+
+  initTasks:
+    # Production-faithful model: the student works from the dev-machine
+    # workstation (kubectl + helm preinstalled), never on the control plane.
+    # This task pulls the cluster's kubeconfig onto dev-machine and rewrites the
+    # API server address from 127.0.0.1 to the control-plane IP so kubectl/helm
+    # reach the cluster over the network. Copied from the proven rancher-k3s
+    # task — same base image and control-plane IP (172.16.0.2).
+    init_kubeconfig_devmachine:
+      init: true
+      machine: dev-machine
+      user: laborant
+      timeout_seconds: 300
+      run: |
+        # Wait until the control-plane node is reachable and k3s has written its
+        # kubeconfig, then fetch it over SSH (passwordless between VMs).
+        for i in $(seq 1 45); do
+          if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=3 cplane-01 \
+               'sudo test -f /etc/rancher/k3s/k3s.yaml' 2>/dev/null; then
+            break
+          fi
+          sleep 2
+        done
+        mkdir -p "$HOME/.kube"
+        ssh -o StrictHostKeyChecking=no cplane-01 'sudo cat /etc/rancher/k3s/k3s.yaml' \
+          | sed 's/127.0.0.1/172.16.0.2/' > "$HOME/.kube/config"
+        chmod 600 "$HOME/.kube/config"
+        grep -q 'KUBECONFIG=' "$HOME/.bashrc" \
+          || echo 'export KUBECONFIG=$HOME/.kube/config' >> "$HOME/.bashrc"
+        export KUBECONFIG="$HOME/.kube/config"
+        kubectl get nodes
+
+    # Install run-ai/fake-gpu-operator so the cluster advertises nvidia.com/gpu
+    # without any real hardware. Adapted from HAMi's Lab 2 (Apache-2.0):
+    # https://project-hami.io/ — create + label the namespace privileged, label a
+    # worker node as a simulated GPU node pool, then helm-install the operator
+    # pinned to 0.0.80. Runs from the dev-machine workstation.
+    init_fake_gpu_operator:
+      init: true
+      machine: dev-machine
+      user: laborant
+      needs:
+        - init_kubeconfig_devmachine
+      timeout_seconds: 300
+      run: |
+        export KUBECONFIG="$HOME/.kube/config"
+        # Namespace for the fake-gpu-operator, labelled privileged so its
+        # device-plugin / status-updater pods can run under pod-security.
+        kubectl create namespace gpu-operator --dry-run=client -o yaml | kubectl apply -f -
+        kubectl label namespace gpu-operator \
+          pod-security.kubernetes.io/enforce=privileged --overwrite
+        # Pick a non-control-plane node to host the simulated GPUs; fall back to
+        # node-01 if the label selector returns nothing.
+        NODE=$(kubectl get nodes -l '!node-role.kubernetes.io/control-plane' \
+          -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+        [ -n "$NODE" ] || NODE=node-01
+        kubectl label node "$NODE" run.ai/simulated-gpu-node-pool=default --overwrite
+        # Install the operator (pinned version per HAMi Lab 2). Idempotent via -i.
+        helm upgrade -i gpu-operator \
+          oci://ghcr.io/run-ai/fake-gpu-operator/fake-gpu-operator \
+          --namespace gpu-operator \
+          --create-namespace \
+          --version 0.0.80
+        # Wait until the fabricated GPUs show up as node capacity.
+        for i in $(seq 1 48); do
+          GPU=$(kubectl get nodes -o json \
+            | jq '[.items[].status.capacity["nvidia.com/gpu"] // "0" | tonumber] | add' 2>/dev/null)
+          [ "${GPU:-0}" -ge 1 ] && { echo "fake GPUs present: ${GPU}"; break; }
+          echo "waiting for fake nvidia.com/gpu capacity (have ${GPU:-0})..."
+          sleep 5
+        done
+
+    # Install HAMi with the device-plugin DISABLED. fake-gpu-operator already owns
+    # nvidia.com/gpu; turning HAMi's device-plugin off avoids a conflict and keeps
+    # this lesson architecture-only (real slicing needs real VRAM — Lesson 6.4).
+    # HAMi then runs just its scheduler + webhook (a single 2/2 pod in kube-system).
+    # Adapted from HAMi Lab 2 (Apache-2.0): https://project-hami.io/
+    init_hami:
+      init: true
+      machine: dev-machine
+      user: laborant
+      needs:
+        - init_fake_gpu_operator
+      timeout_seconds: 600
+      run: |
+        export KUBECONFIG="$HOME/.kube/config"
+        helm repo add hami-charts https://project-hami.github.io/HAMi/
+        helm repo update
+        # Idempotent: skip the install if a release already exists.
+        if ! helm status hami -n kube-system >/dev/null 2>&1; then
+          helm install hami hami-charts/hami \
+            -n kube-system \
+            --set devicePlugin.enabled=false
+        fi
+        # Wait for the scheduler Deployment, then confirm the pod is 2/2
+        # (scheduler container + webhook container).
+        kubectl -n kube-system rollout status deploy/hami-scheduler --timeout=480s || true
+        for i in $(seq 1 48); do
+          if kubectl get pods -n kube-system --no-headers 2>/dev/null \
+               | grep hami-scheduler | grep -q '2/2'; then
+            echo "hami-scheduler is 2/2 Running"
+            break
+          fi
+          echo "waiting for hami-scheduler to reach 2/2..."
+          sleep 5
+        done
+
+  accessControl:
+    canList:
+      - owner
+    canRead:
+      - anyone
+    canStart:
+      - anyone

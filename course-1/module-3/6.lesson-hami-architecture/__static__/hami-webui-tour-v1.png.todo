@@ -1,0 +1,27 @@
+# Image TODO: hami-webui-tour-v1.png
+
+## Purpose
+Tour the optional HAMi WebUI as a concept: per-node and per-GPU allocation and
+utilization trends, with a note that it needs Prometheus and a manual node annotation.
+
+## Composition breakdown
+- A dark dashboard mock-up with a left sidebar menu: "Nodes", "GPUs", "Tasks".
+- Main panel: a grid of GPU cards, each a green chip with a small bar "gpumem used
+  12 / 24 GB" and "gpucores 45%".
+- Top strip: a line chart titled "cluster GPU utilization (24h)" with a blue trend
+  line.
+- Overlay banner: "Requires Prometheus + manual node annotation — not part of the
+  graded path in this lesson".
+
+## Gemini prompt
+Create a flat technical dashboard mock-up of the HAMi WebUI. Draw a dark dashboard
+with a left sidebar menu listing "Nodes", "GPUs", and "Tasks". In the main panel,
+draw a grid of GPU cards, each showing a bright green GPU chip with two small bars
+labeled "gpumem used 12 / 24 GB" and "gpucores 45%". Across the top, draw a line chart
+titled "cluster GPU utilization (24h)" with an electric-blue trend line. Overlay a
+banner reading "Requires Prometheus + manual node annotation — not part of the graded
+path in this lesson". Style: flat technical illustration, dark navy background
+(#0D1117), electric blue (#2F81F7) and neon green (#39D353) accents, off-white
+(#E6EDF3) labels, subtle hexagonal grid texture at 10% opacity, no photorealism, no
+gradients on solid elements, clean sans-serif labels, developer education platform
+aesthetic. Aspect ratio 16:9.
