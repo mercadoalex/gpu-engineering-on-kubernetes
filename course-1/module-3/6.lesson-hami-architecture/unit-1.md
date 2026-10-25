@@ -364,12 +364,39 @@ HAMi is worth a dedicated lesson — it is the most flexible of the three.
 
 ## 6. Run a GPU pod and see a simulated nvidia-smi
 
-Enough reading — put a pod on a fake GPU. The manifest already lives in the repo. It carries `hami.io/webhook: ignore` (so it uses the default scheduler, per Section 4) and `nvidia.com/gpu: 1`.
+Enough reading — put a pod on a fake GPU. Create it right from the terminal. It carries `hami.io/webhook: ignore` (so it uses the default scheduler, per Section 4) and `nvidia.com/gpu: 1`.
 
-**Activity — Terminal:** Apply the test pod and watch it schedule:
+**Activity — Terminal:** Apply the test pod and watch it schedule. Each line below fits on one line so the heredoc writes clean YAML:
 
 ```bash
-kubectl apply -f /workdir/course-1/manifests/hami-fake-gpu-pod.yaml
+kubectl apply -f - <<'EOF'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hami-fake-gpu-pod
+  namespace: default
+  labels:
+    app: hami-fake-gpu-pod
+    hami.io/webhook: ignore
+  annotations:
+    run.ai/simulated-gpu-utilization: "10-30"
+spec:
+  restartPolicy: Never
+  containers:
+    - name: app
+      image: ubuntu:22.04
+      command: ["bash", "-lc", "sleep 3600"]
+      resources:
+        requests:
+          cpu: "100m"
+          memory: 128Mi
+        limits:
+          nvidia.com/gpu: 1
+  tolerations:
+    - key: nvidia.com/gpu
+      operator: Exists
+      effect: NoSchedule
+EOF
 ```
 
 ```bash
@@ -443,7 +470,8 @@ _The HAMi WebUI shows per-node and per-GPU allocation and utilization trends. It
 :name: verify_gpu_pod_scheduled
 ---
 #active
-In the **Terminal**, apply `course-1/manifests/hami-fake-gpu-pod.yaml`, then run
+In the **Terminal**, apply the `hami-fake-gpu-pod` manifest from the activity above
+(the `kubectl apply -f - <<'EOF'` block), then run
 `kubectl get pod hami-fake-gpu-pod` and confirm the status is **Running**.
 
 #completed
