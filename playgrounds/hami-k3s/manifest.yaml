@@ -157,22 +157,26 @@ playground:
           -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
         [ -n "$NODE" ] || NODE=node-01
         kubectl label node "$NODE" run.ai/simulated-gpu-node-pool=default --overwrite
-        # Idempotent install. If the operator is ALREADY deployed and serving GPU
-        # capacity (e.g. a retry, or a warm cluster), skip the helm upgrade entirely
-        # — re-running it hits a server-side-apply ownership CONFLICT on the shared
-        # `nvidia` RuntimeClass object and fails, which would make this task loop
-        # forever. Only install when the release is genuinely absent.
-        if helm status gpu-operator -n gpu-operator >/dev/null 2>&1; then
-          echo "gpu-operator release already present — skipping helm upgrade"
+        # Idempotent install. If the operator release is ALREADY deployed, skip —
+        # re-running helm would just churn revisions.
+        if helm status gpu-operator -n gpu-operator 2>/dev/null | grep -q '^STATUS: deployed'; then
+          echo "gpu-operator already deployed — skipping install"
         else
-          # --force resolves the RuntimeClass field-ownership conflict on a fresh
-          # install where the object may pre-exist from cluster bootstrap.
+          # CRITICAL (baked-image fix): the pre-baked k3s image ships an `nvidia`
+          # RuntimeClass owned by k3s ("deploy@cplane-01"), WITHOUT Helm's ownership
+          # metadata. The fake-gpu-operator chart also defines that RuntimeClass, so
+          # `helm install` fails — either "cannot be imported (invalid ownership
+          # metadata)" or a server-side-apply ".handler" field conflict — and loops
+          # forever (observed 400+ failed revisions). Deleting the pre-existing object
+          # lets Helm create and own it cleanly (k3s keeps its own runtime handler
+          # regardless). Also clear any half-failed release first.
+          helm uninstall gpu-operator -n gpu-operator >/dev/null 2>&1 || true
+          kubectl delete runtimeclass nvidia --ignore-not-found >/dev/null 2>&1 || true
           helm upgrade -i gpu-operator \
             oci://ghcr.io/run-ai/fake-gpu-operator/fake-gpu-operator \
             --namespace gpu-operator \
             --create-namespace \
-            --version 0.0.80 \
-            --force || echo "helm upgrade returned non-zero (likely a pre-existing RuntimeClass) — continuing to capacity check"
+            --version 0.0.80
         fi
         # Wait until the fabricated GPUs show up as node capacity. This is the real
         # success signal — if GPUs are present, the operator is working regardless of
