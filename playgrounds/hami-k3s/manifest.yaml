@@ -157,20 +157,35 @@ playground:
           -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
         [ -n "$NODE" ] || NODE=node-01
         kubectl label node "$NODE" run.ai/simulated-gpu-node-pool=default --overwrite
-        # Install the operator (pinned version per HAMi Lab 2). Idempotent via -i.
-        helm upgrade -i gpu-operator \
-          oci://ghcr.io/run-ai/fake-gpu-operator/fake-gpu-operator \
-          --namespace gpu-operator \
-          --create-namespace \
-          --version 0.0.80
-        # Wait until the fabricated GPUs show up as node capacity.
+        # Idempotent install. If the operator is ALREADY deployed and serving GPU
+        # capacity (e.g. a retry, or a warm cluster), skip the helm upgrade entirely
+        # — re-running it hits a server-side-apply ownership CONFLICT on the shared
+        # `nvidia` RuntimeClass object and fails, which would make this task loop
+        # forever. Only install when the release is genuinely absent.
+        if helm status gpu-operator -n gpu-operator >/dev/null 2>&1; then
+          echo "gpu-operator release already present — skipping helm upgrade"
+        else
+          # --force resolves the RuntimeClass field-ownership conflict on a fresh
+          # install where the object may pre-exist from cluster bootstrap.
+          helm upgrade -i gpu-operator \
+            oci://ghcr.io/run-ai/fake-gpu-operator/fake-gpu-operator \
+            --namespace gpu-operator \
+            --create-namespace \
+            --version 0.0.80 \
+            --force || echo "helm upgrade returned non-zero (likely a pre-existing RuntimeClass) — continuing to capacity check"
+        fi
+        # Wait until the fabricated GPUs show up as node capacity. This is the real
+        # success signal — if GPUs are present, the operator is working regardless of
+        # the helm release's cosmetic status. Exit 0 as soon as they appear.
         for i in $(seq 1 48); do
           GPU=$(kubectl get nodes -o json \
             | jq '[.items[].status.capacity["nvidia.com/gpu"] // "0" | tonumber] | add' 2>/dev/null)
-          [ "${GPU:-0}" -ge 1 ] && { echo "fake GPUs present: ${GPU}"; break; }
+          [ "${GPU:-0}" -ge 1 ] && { echo "fake GPUs present: ${GPU} — fake-gpu-operator ready"; exit 0; }
           echo "waiting for fake nvidia.com/gpu capacity (have ${GPU:-0})..."
           sleep 5
         done
+        echo "ERROR: fake GPU capacity never appeared" >&2
+        exit 1
 
     # Install HAMi with the device-plugin DISABLED. fake-gpu-operator already owns
     # nvidia.com/gpu; turning HAMi's device-plugin off avoids a conflict and keeps
