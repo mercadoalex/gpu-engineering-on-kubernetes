@@ -7,6 +7,11 @@ RELEASE    ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo d
 FULL_TAG   := $(REGISTRY)/$(IMAGE_NAME):$(RELEASE)
 LATEST_TAG := $(REGISTRY)/$(IMAGE_NAME):latest
 
+# HAMi-prepulled k3s control-plane rootfs (Lesson 3.6, Option A)
+HAMI_IMAGE_NAME ?= hami-k3s-cplane
+HAMI_TAG        ?= v1
+HAMI_FULL_TAG   := $(REGISTRY)/$(HAMI_IMAGE_NAME):$(HAMI_TAG)
+
 LAB_USER           ?= laborant
 KUBECTL_VERSION    ?= v1.31.3
 KWOKCTL_VERSION    ?= v0.6.0
@@ -14,7 +19,7 @@ HELM_VERSION       ?= v3.16.3
 KUBE_VERSION       ?= v1.31.3
 ETCD_VERSION       ?= 3.5.15-0
 
-.PHONY: all build push tag-latest run shell clean help
+.PHONY: all build push tag-latest run shell clean help bake-hami-k3s bake-hami-k3s-push
 
 all: build
 
@@ -35,6 +40,26 @@ build: check-docker
 		-f $(CUR_DIR)/rootfs/Dockerfile \
 		$(CUR_DIR)
 	@echo "\033[0;32mBuild complete: $(FULL_TAG) (also tagged :dev)\033[0m"
+
+## bake-hami-k3s: Bake HAMi+fake-gpu-operator+ubuntu images into the k3s cplane rootfs (Lesson 3.6, Option A)
+bake-hami-k3s: check-docker
+	@echo "\033[0;32mDeriving HAMi image list...\033[0m"
+	bash $(CUR_DIR)/rootfs-hami-k3s/derive-images.sh
+	@echo "\033[0;32mPulling + saving images into airgap tar...\033[0m"
+	bash $(CUR_DIR)/rootfs-hami-k3s/build.sh
+	@echo "\033[0;32mBuilding $(HAMI_FULL_TAG)...\033[0m"
+	docker build \
+		--progress plain \
+		--platform linux/amd64 \
+		-t $(HAMI_FULL_TAG) \
+		-f $(CUR_DIR)/rootfs-hami-k3s/Dockerfile \
+		$(CUR_DIR)/rootfs-hami-k3s
+	@echo "\033[0;32mBake complete: $(HAMI_FULL_TAG)\033[0m"
+
+## bake-hami-k3s-push: Push the baked HAMi cplane image to the registry (run manually)
+bake-hami-k3s-push: check-registry
+	docker push $(HAMI_FULL_TAG)
+	@echo "\033[0;32mPushed: $(HAMI_FULL_TAG)\033[0m"
 
 ## push: Push the image to the registry
 push: build check-registry

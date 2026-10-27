@@ -50,7 +50,7 @@ playground:
         - name: laborant
           default: true
       drives:
-        - source: k3s-cplane
+        - source: oci://ghcr.io/mercadoalex/hami-k3s-cplane:v1
           mount: /
           size: 30GiB
       network:

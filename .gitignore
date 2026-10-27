@@ -3,6 +3,8 @@ downloads/
 *.zip
 *.deb
 *.tar.gz
+# Multi-GB baked airgap tar — built locally by rootfs-hami-k3s/build.sh, never committed
+rootfs-hami-k3s/*.tar
 *.key
 *.json
 !package.json
